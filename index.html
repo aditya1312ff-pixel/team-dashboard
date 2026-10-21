@@ -28,11 +28,9 @@
       appId: "1:567637201061:web:ac4224e3fd5a2a7b037d4c"
     };
     
-    // Initialize Firebase using the global firebase object
     firebase.initializeApp(firebaseConfig);
     window.firebaseDB = firebase.firestore();
     
-    // Create wrapper functions so the rest of the code works unchanged
     window.firebaseDoc = (db, coll, doc) => db.collection(coll).doc(doc);
     window.firebaseGetDoc = (docRef) => docRef.get();
     window.firebaseSetDoc = (docRef, data) => docRef.set(data);
@@ -79,7 +77,7 @@
       ArrowRight, Search, Filter, Layers, Info, X, Clipboard, Check, Zap,
       ArrowDown, AlertCircle, CheckCircle, HelpCircle, PlusCircle, Plus,
       ArrowUpDown, ExternalLink, LayoutDashboard, BarChart3, PackagePlus, Link2,
-      Sun, Moon, Menu
+      Sun, Moon, Menu, Edit
     } from 'https://esm.sh/lucide-react@0.454.0?deps=react@18.3.1';
 
     const Papa = window.Papa;
@@ -690,7 +688,7 @@
       );
     };
 
-    const PhysicalEntry = ({ buys, sells, onAddBuy, onAddSell, onDeleteBuy, onDeleteSell }) => {
+    const PhysicalEntry = ({ buys, sells, onAddBuy, onAddSell, onDeleteBuy, onDeleteSell, setEditingPhysical }) => {
       const [buyLot, setBuyLot] = useState(''); const [buyCat, setBuyCat] = useState(''); const [buyMetal, setBuyMetal] = useState('AL'); const [buyExch, setBuyExch] = useState('LME'); const [buyDate, setBuyDate] = useState(new Date().toISOString().slice(0, 10)); const [buyQty, setBuyQty] = useState(''); const [buyCsp, setBuyCsp] = useState(''); const [buyPrem, setBuyPrem] = useState('0'); const [buyUsd, setBuyUsd] = useState('84.2');
       const [buyFileName, setBuyFileName] = useState('No File'); const [buyFileData, setBuyFileData] = useState(null);
       const [sellLot, setSellLot] = useState(''); const [sellCat, setSellCat] = useState(''); const [sellDate, setSellDate] = useState(new Date().toISOString().slice(0, 10)); const [sellQty, setSellQty] = useState(''); const [sellPrice, setSellPrice] = useState('');
@@ -741,9 +739,9 @@
               <div className="px-5 py-3 border-b border-[#1e2d4d] bg-[#16223d]"><h4 className="text-xs font-bold uppercase text-slate-300">Physical Purchases Log ({buys.length})</h4></div>
               <div className="overflow-x-auto max-h-80">
                 <table className="w-full text-xs text-left">
-                  <thead><tr className="bg-[#16223d] text-slate-400 text-[10.5px] uppercase font-semibold"><th className="py-2.5 px-3">Lot ID</th><th className="py-2.5 px-2">Metal</th><th className="py-2.5 px-2">Date</th><th className="py-2.5 px-2 text-right">Qty (MT)</th><th className="py-2.5 px-2 text-right">Landed Price</th><th className="py-2.5 px-2 text-center">Doc</th><th className="py-2.5 px-3 text-center">Del</th></tr></thead>
+                  <thead><tr className="bg-[#16223d] text-slate-400 text-[10.5px] uppercase font-semibold"><th className="py-2.5 px-3">Lot ID</th><th className="py-2.5 px-2">Metal</th><th className="py-2.5 px-2">Date</th><th className="py-2.5 px-2 text-right">Qty (MT)</th><th className="py-2.5 px-2 text-right">Landed Price</th><th className="py-2.5 px-2 text-center">Doc</th><th className="py-2.5 px-3 text-center">Actions</th></tr></thead>
                   <tbody className="divide-y divide-[#182543] font-mono">
-                    {buys.map(b => (<tr key={b.id} className="hover:bg-[#16223d]/50"><td className="py-2 px-3 font-bold text-white">{b.lot}</td><td className="py-2 px-2 font-sans">{shortMetal(b.metal)}</td><td className="py-2 px-2 text-slate-400">{fmtD(b.date)}</td><td className="py-2 px-2 text-right">{fmt(b.qty, 2)}</td><td className="py-2 px-2 text-right">₹{fmt(b.landed, 2)}</td><td className="py-2 px-2 text-center">{b.fileData ? (<a href={b.fileData} target="_blank" rel="noopener noreferrer" title={`View ${b.file}`} className="text-emerald-400 hover:text-emerald-300"><FileText className="w-3.5 h-3.5 inline" /></a>) : (<span title="No Document" className="text-slate-600"><FileText className="w-3.5 h-3.5 inline" /></span>)}</td><td className="py-2 px-3 text-center"><button onClick={() => onDeleteBuy(b.id)} className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button></td></tr>))}
+                    {buys.map(b => (<tr key={b.id} className="hover:bg-[#16223d]/50"><td className="py-2 px-3 font-bold text-white">{b.lot}</td><td className="py-2 px-2 font-sans">{shortMetal(b.metal)}</td><td className="py-2 px-2 text-slate-400">{fmtD(b.date)}</td><td className="py-2 px-2 text-right">{fmt(b.qty, 2)}</td><td className="py-2 px-2 text-right">₹{fmt(b.landed, 2)}</td><td className="py-2 px-2 text-center">{b.fileData ? (<a href={b.fileData} target="_blank" rel="noopener noreferrer" title={`View ${b.file}`} className="text-emerald-400 hover:text-emerald-300"><FileText className="w-3.5 h-3.5 inline" /></a>) : (<span title="No Document" className="text-slate-600"><FileText className="w-3.5 h-3.5 inline" /></span>)}</td><td className="py-2 px-3 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => setEditingPhysical({ type: 'buy', data: b })} className="text-blue-400 hover:text-blue-300 p-1 cursor-pointer" title="Edit"><Edit className="w-3.5 h-3.5" /></button><button onClick={() => onDeleteBuy(b.id)} className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td></tr>))}
                   </tbody>
                 </table>
               </div>
@@ -752,9 +750,9 @@
               <div className="px-5 py-3 border-b border-[#1e2d4d] bg-[#16223d]"><h4 className="text-xs font-bold uppercase text-slate-300">Physical Sales Log ({sells.length})</h4></div>
               <div className="overflow-x-auto max-h-80">
                 <table className="w-full text-xs text-left">
-                  <thead><tr className="bg-[#16223d] text-slate-400 text-[10.5px] uppercase font-semibold"><th className="py-2.5 px-3">Lot ID</th><th className="py-2.5 px-2">Buyer</th><th className="py-2.5 px-2">Date</th><th className="py-2.5 px-2 text-right">Sold Qty (MT)</th><th className="py-2.5 px-2 text-right">Sell Price</th><th className="py-2.5 px-3 text-center">Del</th></tr></thead>
+                  <thead><tr className="bg-[#16223d] text-slate-400 text-[10.5px] uppercase font-semibold"><th className="py-2.5 px-3">Lot ID</th><th className="py-2.5 px-2">Buyer</th><th className="py-2.5 px-2">Date</th><th className="py-2.5 px-2 text-right">Sold Qty (MT)</th><th className="py-2.5 px-2 text-right">Sell Price</th><th className="py-2.5 px-3 text-center">Actions</th></tr></thead>
                   <tbody className="divide-y divide-[#182543] font-mono">
-                    {sells.map(s => (<tr key={s.id} className="hover:bg-[#16223d]/50"><td className="py-2 px-3 font-bold text-white">{s.lot}</td><td className="py-2 px-2 font-sans text-slate-300">{s.cat || '—'}</td><td className="py-2 px-2 text-slate-400">{fmtD(s.date)}</td><td className="py-2 px-2 text-right">{fmt(s.qty, 2)}</td><td className="py-2 px-2 text-right">₹{fmt(s.price, 2)}</td><td className="py-2 px-3 text-center"><button onClick={() => onDeleteSell(s.id)} className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button></td></tr>))}
+                    {sells.map(s => (<tr key={s.id} className="hover:bg-[#16223d]/50"><td className="py-2 px-3 font-bold text-white">{s.lot}</td><td className="py-2 px-2 font-sans text-slate-300">{s.cat || '—'}</td><td className="py-2 px-2 text-slate-400">{fmtD(s.date)}</td><td className="py-2 px-2 text-right">{fmt(s.qty, 2)}</td><td className="py-2 px-2 text-right">₹{fmt(s.price, 2)}</td><td className="py-2 px-3 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => setEditingPhysical({ type: 'sell', data: s })} className="text-blue-400 hover:text-blue-300 p-1 cursor-pointer" title="Edit"><Edit className="w-3.5 h-3.5" /></button><button onClick={() => onDeleteSell(s.id)} className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td></tr>))}
                   </tbody>
                 </table>
               </div>
@@ -764,7 +762,7 @@
       );
     };
 
-    const HedgeMapper = ({ hedges, liveSettles, onImportTrades, onAddHedgeTrade, onUpdateHedgeTrade, onDeleteHedgeTrade, onAddLiveSettle, onDeleteLiveSettle, onSyncOpenPrompts, onOpenBulkPasteModal, onClearMappedTrades, onRestoreArchivedTrades, onDeleteAllHedgeTrades, archivedCount }) => {
+    const HedgeMapper = ({ hedges, liveSettles, onImportTrades, onAddHedgeTrade, onUpdateHedgeTrade, onDeleteHedgeTrade, onAddLiveSettle, onDeleteLiveSettle, onSyncOpenPrompts, onOpenBulkPasteModal, onClearMappedTrades, onRestoreArchivedTrades, onDeleteAllHedgeTrades, archivedCount, setEditingHedge }) => {
       const [tradeId, setTradeId] = useState(''); const [exch, setExch] = useState('MCX'); const [metal, setMetal] = useState('AL'); const [broker, setBroker] = useState('MOTILAL'); const [date, setDate] = useState(new Date().toISOString().slice(0, 10)); const [prompt, setPrompt] = useState(''); const [buyQty, setBuyQty] = useState(''); const [buyRate, setBuyRate] = useState(''); const [sellQty, setSellQty] = useState(''); const [sellRate, setSellRate] = useState(''); const [mappedLot, setMappedLot] = useState(''); const [mcxDefaultSide, setMcxDefaultSide] = useState('SELL');
       const [liveMetal, setLiveMetal] = useState('AL'); const [liveExch, setLiveExch] = useState('MCX'); const [livePrompt, setLivePrompt] = useState(''); const [liveSettle, setLiveSettle] = useState('');
       const [search, setSearch] = useState(''); const [metalFilter, setMetalFilter] = useState(''); const [exchFilter, setExchFilter] = useState(''); const [brokerFilter, setBrokerFilter] = useState(''); const [statusFilter, setStatusFilter] = useState(''); const [monthFilter, setMonthFilter] = useState(''); const [monthBasis, setMonthBasis] = useState('prompt'); const [specificDateFilter, setSpecificDateFilter] = useState(''); const [isUploadPanelOpen, setIsUploadPanelOpen] = useState(true); const [isManualEntryOpen, setIsManualEntryOpen] = useState(true);
@@ -868,7 +866,7 @@
             </div>
             <div className="border border-[#1e2d4d] rounded-xl overflow-x-auto max-h-[60vh] bg-[#0b1220]">
               <table className="w-full text-xs text-left">
-                <thead><tr className="bg-[#16223d] text-slate-400 uppercase text-[10.5px] font-semibold sticky top-0 z-10 border-b border-[#1e2d4d]"><th className="py-2.5 px-3">Trade ID</th><th className="py-2.5 px-2">Exch / Broker</th><th className="py-2.5 px-2">Metal</th><th className="py-2.5 px-3">Trade Date</th><th className="py-2.5 px-3">Prompt / Expiry</th><th className="py-2.5 px-2 text-right">Buy Lots (MT)</th><th className="py-2.5 px-2 text-right">Buy Rate</th><th className="py-2.5 px-2 text-right">Sell Lots (MT)</th><th className="py-2.5 px-2 text-right">Sell Rate</th><th className="py-2.5 px-3">Assigned Lot ID</th><th className="py-2.5 px-2 text-center">Del</th></tr></thead>
+                <thead><tr className="bg-[#16223d] text-slate-400 uppercase text-[10.5px] font-semibold sticky top-0 z-10 border-b border-[#1e2d4d]"><th className="py-2.5 px-3">Trade ID</th><th className="py-2.5 px-2">Exch / Broker</th><th className="py-2.5 px-2">Metal</th><th className="py-2.5 px-3">Trade Date</th><th className="py-2.5 px-3">Prompt / Expiry</th><th className="py-2.5 px-2 text-right">Buy Lots (MT)</th><th className="py-2.5 px-2 text-right">Buy Rate</th><th className="py-2.5 px-2 text-right">Sell Lots (MT)</th><th className="py-2.5 px-2 text-right">Sell Rate</th><th className="py-2.5 px-3">Assigned Lot ID</th><th className="py-2.5 px-2 text-center">Actions</th></tr></thead>
                 <tbody className="divide-y divide-[#182543] font-mono">
                   {visibleTrades.map(h => {
                     const mul = getLotMultiplier(h.exch, h.metal); const buyMT = nz(h.buyQty) * mul; const sellMT = nz(h.sellQty) * mul;
@@ -884,12 +882,64 @@
                         <td className="py-2 px-2 text-right text-slate-300">{h.sellQty > 0 ? (<span>{fmt(h.sellQty, 2)} <span className="text-[10px] text-slate-500">({fmt(sellMT, 1)}MT)</span></span>) : '—'}</td>
                         <td className="py-2 px-2 text-right text-slate-300">{h.sellRate > 0 ? (h.exch === 'MCX' ? `₹${fmt(h.sellRate, 2)}` : `$${fmt(h.sellRate, 2)}`) : '—'}</td>
                         <td className="py-2 px-3"><input type="text" placeholder="Assign Lot" value={h.mappedLot} onChange={e => onUpdateHedgeTrade(h.id, { mappedLot: e.target.value.toUpperCase() })} className={`w-28 px-2 py-1 rounded text-xs font-mono font-bold uppercase focus:outline-none ${h.mappedLot ? 'bg-[#111c33] border border-blue-500/40 text-blue-300' : 'bg-amber-950/20 border border-amber-500/40 text-amber-300'}`} /></td>
-                        <td className="py-2 px-2 text-center"><button onClick={() => onDeleteHedgeTrade(h.id)} className="text-rose-400 hover:text-rose-300 p-0.5 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button></td>
+                        <td className="py-2 px-2 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => setEditingHedge(h)} className="text-blue-400 hover:text-blue-300 p-1 cursor-pointer" title="Edit Trade"><Edit className="w-3.5 h-3.5" /></button><button onClick={() => onDeleteHedgeTrade(h.id)} className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ==================== EDIT MODALS ====================
+    const EditPhysicalModal = ({ editing, onClose, onSave }) => {
+      const [formData, setFormData] = useState(editing.data);
+      if (!editing) return null;
+      const isBuy = editing.type === 'buy';
+      const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#111c33] border border-[#1e2d4d] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+            <h3 className="text-sm font-bold text-white">Edit {isBuy ? 'Physical Purchase' : 'Physical Sale'} (Lot {formData.lot})</h3>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div><label className="text-slate-400 block mb-1">Lot ID</label><input name="lot" value={formData.lot} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
+              <div><label className="text-slate-400 block mb-1">Date</label><input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
+              <div><label className="text-slate-400 block mb-1">Qty (MT)</label><input type="number" name="qty" value={formData.qty} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
+              <div><label className="text-slate-400 block mb-1">{isBuy ? 'Landed Price' : 'Sell Price'}</label><input type="number" name={isBuy ? 'landed' : 'price'} value={isBuy ? formData.landed : formData.price} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
+              <div className="col-span-2"><label className="text-slate-400 block mb-1">{isBuy ? 'Supplier' : 'Buyer'}</label><input name="cat" value={formData.cat || ''} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white" /></div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={onClose} className="px-3 py-1.5 text-xs text-slate-400 hover:text-white">Cancel</button>
+              <button onClick={() => onSave(formData)} className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const EditHedgeModal = ({ editing, onClose, onSave }) => {
+      const [formData, setFormData] = useState(editing);
+      if (!editing) return null;
+      const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#111c33] border border-[#1e2d4d] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+            <h3 className="text-sm font-bold text-white">Edit Hedge Trade ({formData.tradeId})</h3>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div><label className="text-slate-400 block mb-1">Trade Date</label><input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
+              <div><label className="text-slate-400 block mb-1">Prompt/Expiry</label><input type="date" name="prompt" value={formData.prompt} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
+              <div><label className="text-slate-400 block mb-1">Buy Qty (Lots)</label><input type="number" name="buyQty" value={formData.buyQty} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
+              <div><label className="text-slate-400 block mb-1">Buy Rate</label><input type="number" name="buyRate" value={formData.buyRate} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
+              <div><label className="text-slate-400 block mb-1">Sell Qty (Lots)</label><input type="number" name="sellQty" value={formData.sellQty} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
+              <div><label className="text-slate-400 block mb-1">Sell Rate</label><input type="number" name="sellRate" value={formData.sellRate} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
+              <div className="col-span-2"><label className="text-slate-400 block mb-1">Assigned Lot ID</label><input name="mappedLot" value={formData.mappedLot} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono uppercase" /></div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={onClose} className="px-3 py-1.5 text-xs text-slate-400 hover:text-white">Cancel</button>
+              <button onClick={() => onSave(formData)} className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded">Save Changes</button>
             </div>
           </div>
         </div>
@@ -1065,27 +1115,25 @@
       const [liveSettles, setLiveSettles] = useState([]);
       const [lotFxRates, setLotFxRates] = useState({});
       const [isDataLoaded, setIsDataLoaded] = useState(false);
+      const [editingPhysical, setEditingPhysical] = useState(null); 
+      const [editingHedge, setEditingHedge] = useState(null);       
 
       useEffect(() => {
         try { localStorage.setItem('hb_theme', theme); } catch {}
         if (theme === 'light') document.documentElement.classList.add('light-theme'); else document.documentElement.classList.remove('light-theme');
       }, [theme]);
+
       // LOAD FROM FIREBASE (Safe Version)
       useEffect(() => {
         let isMounted = true;
-        
         const loadData = async () => {
-          // Give Firebase script 1 second to load if it's slow
           if (!window.firebaseDB) {
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
-
           try {
             if (!window.firebaseDB) throw new Error("Firebase script blocked by browser.");
-            
             const docRef = window.firebaseDoc(window.firebaseDB, "hedgebook", "data");
             const docSnap = await window.firebaseGetDoc(docRef);
-            
              if (docSnap.exists && isMounted) {
              const data = docSnap.data() || docSnap;
               setBuys(data.buys || []);
@@ -1100,22 +1148,17 @@
             if (isMounted) setIsDataLoaded(true);
           }
         };
-
         loadData();
-        
         return () => { isMounted = false; };
       }, []);
 
-         // SAVE TO FIREBASE HELPER
+      // SAVE TO FIREBASE HELPER
       const saveToFirebase = async (newBuys, newSells, newHedges, newSettles, newFx) => {
         try {
-          // Wait for Firebase to load if it's slow
           if (!window.firebaseDoc) {
             await new Promise(resolve => setTimeout(resolve, 1500));
           }
-          
           if (!window.firebaseDoc) throw new Error("Firebase script blocked by browser.");
-
           const docRef = window.firebaseDoc(window.firebaseDB, "hedgebook", "data");
           await window.firebaseSetDoc(docRef, {
             buys: newBuys, sells: newSells, hedges: newHedges, liveSettles: newSettles, lotFxRates: newFx
@@ -1126,6 +1169,7 @@
           showToast("Failed to save to cloud. Check console.");
         }
       };
+      
       const defaultFx = 84.2;
       const [activeTab, setActiveTab] = useState('matrix');
       const [currentMetal, setCurrentMetal] = useState('BOTH');
@@ -1239,8 +1283,8 @@
                 {activeTab === 'dashboard' && (<CombinedDashboard data={filteredDashboard} onSelectLot={setSelectedLot} onOpenPromptMatrix={promptDate => { setActiveTab('matrix'); setHighlightPrompt(promptDate); }} />)}
                 {activeTab === 'physical' && (<PhysicalAnalytics data={filteredPhysical} onSelectLot={setSelectedLot} />)}
                 {activeTab === 'hedge' && (<HedgeAnalytics data={filteredHedge} onSelectLot={setSelectedLot} onUpdateLotFx={handleUpdateLotFx} />)}
-                {activeTab === 'entry-phys' && (<PhysicalEntry buys={buys} sells={sells} onAddBuy={buy => { const nb = [...buys, buy]; setBuys(nb); saveToFirebase(nb, sells, hedges, liveSettles, lotFxRates); showToast(`Saved Buy`); }} onAddSell={sell => { const ns = [...sells, sell]; setSells(ns); saveToFirebase(buys, ns, hedges, liveSettles, lotFxRates); showToast(`Saved Sell`); }} onDeleteBuy={id => { const nb = buys.filter(b => b.id !== id); setBuys(nb); saveToFirebase(nb, sells, hedges, liveSettles, lotFxRates); }} onDeleteSell={id => { const ns = sells.filter(s => s.id !== id); setSells(ns); saveToFirebase(buys, ns, hedges, liveSettles, lotFxRates); }} />)}
-                {activeTab === 'entry-hedge' && (<HedgeMapper hedges={hedges} liveSettles={liveSettles} onImportTrades={nt => { const nh = [...hedges, ...nt]; setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); showToast(`Imported trades`); }} onAddHedgeTrade={t => { const nh = [...hedges, t]; setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); showToast(`Added trade`); }} onUpdateHedgeTrade={(id, up) => { const nh = hedges.map(h => h.id === id ? { ...h, ...up } : h); setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); }} onDeleteHedgeTrade={id => { const nh = hedges.filter(h => h.id !== id); setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); }} onAddLiveSettle={(m,e,p,s) => { const ns = liveSettles.filter(x => !(x.metal === m && x.exchange === e && x.prompt === p)); ns.push({ id: `s-${Date.now()}`, metal: m, exchange: e, prompt: p, settle: s }); setLiveSettles(ns); saveToFirebase(buys, sells, hedges, ns, lotFxRates); showToast(`Saved settle price`); }} onDeleteLiveSettle={id => { const ns = liveSettles.filter(s => s.id !== id); setLiveSettles(ns); saveToFirebase(buys, sells, hedges, ns, lotFxRates); }} onSyncOpenPrompts={handleSyncOpenPrompts} onOpenBulkPasteModal={() => setIsBulkPasteModalOpen(true)} onClearMappedTrades={() => { const nh = hedges.map(h => h.mappedLot ? { ...h, archived: true } : h); setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); }} onRestoreArchivedTrades={() => { const nh = hedges.map(h => ({ ...h, archived: false })); setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); }} onDeleteAllHedgeTrades={() => { setConfirmDialog({ isOpen: true, title: 'Delete All?', message: 'Delete all trades?', onConfirm: () => { setHedges([]); saveToFirebase(buys, sells, [], liveSettles, lotFxRates); } }); }} archivedCount={hedges.filter(h => h.archived).length} />)}
+                {activeTab === 'entry-phys' && (<PhysicalEntry buys={buys} sells={sells} setEditingPhysical={setEditingPhysical} onAddBuy={buy => { const nb = [...buys, buy]; setBuys(nb); saveToFirebase(nb, sells, hedges, liveSettles, lotFxRates); showToast(`Saved Buy`); }} onAddSell={sell => { const ns = [...sells, sell]; setSells(ns); saveToFirebase(buys, ns, hedges, liveSettles, lotFxRates); showToast(`Saved Sell`); }} onDeleteBuy={id => { const nb = buys.filter(b => b.id !== id); setBuys(nb); saveToFirebase(nb, sells, hedges, liveSettles, lotFxRates); }} onDeleteSell={id => { const ns = sells.filter(s => s.id !== id); setSells(ns); saveToFirebase(buys, ns, hedges, liveSettles, lotFxRates); }} />)}
+                {activeTab === 'entry-hedge' && (<HedgeMapper hedges={hedges} liveSettles={liveSettles} setEditingHedge={setEditingHedge} onImportTrades={nt => { const nh = [...hedges, ...nt]; setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); showToast(`Imported trades`); }} onAddHedgeTrade={t => { const nh = [...hedges, t]; setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); showToast(`Added trade`); }} onUpdateHedgeTrade={(id, up) => { const nh = hedges.map(h => h.id === id ? { ...h, ...up } : h); setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); }} onDeleteHedgeTrade={id => { const nh = hedges.filter(h => h.id !== id); setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); }} onAddLiveSettle={(m,e,p,s) => { const ns = liveSettles.filter(x => !(x.metal === m && x.exchange === e && x.prompt === p)); ns.push({ id: `s-${Date.now()}`, metal: m, exchange: e, prompt: p, settle: s }); setLiveSettles(ns); saveToFirebase(buys, sells, hedges, ns, lotFxRates); showToast(`Saved settle price`); }} onDeleteLiveSettle={id => { const ns = liveSettles.filter(s => s.id !== id); setLiveSettles(ns); saveToFirebase(buys, sells, hedges, ns, lotFxRates); }} onSyncOpenPrompts={handleSyncOpenPrompts} onOpenBulkPasteModal={() => setIsBulkPasteModalOpen(true)} onClearMappedTrades={() => { const nh = hedges.map(h => h.mappedLot ? { ...h, archived: true } : h); setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); }} onRestoreArchivedTrades={() => { const nh = hedges.map(h => ({ ...h, archived: false })); setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); }} onDeleteAllHedgeTrades={() => { setConfirmDialog({ isOpen: true, title: 'Delete All?', message: 'Delete all trades?', onConfirm: () => { setHedges([]); saveToFirebase(buys, sells, [], liveSettles, lotFxRates); } }); }} archivedCount={hedges.filter(h => h.archived).length} />)}
               </div>
             </main>
           </div>
@@ -1249,6 +1293,42 @@
           <LotDetailModal lotId={selectedLot} onClose={() => setSelectedLot(null)} buys={buys} sells={sells} promptLegs={selectedLotPromptLegs} dashboardData={engineResult.dashboard} hedgeData={engineResult.hedge} />
           {isBulkPasteModalOpen && (<BulkPasteModal title="Bulk Paste Lot IDs" description="Paste column of Lot IDs" placeholder={'AL1\nAL1\nZN1'} onApply={lines => { const nh = [...hedges]; let idx = 0; for (let i = 0; i < nh.length && idx < lines.length; i++) { if (!nh[i].archived && !nh[i].mappedLot) { nh[i] = { ...nh[i], mappedLot: lines[idx].toUpperCase() }; idx++; } } setHedges(nh); saveToFirebase(buys, sells, nh, liveSettles, lotFxRates); }} onClose={() => setIsBulkPasteModalOpen(false)} />)}
           <ConfirmModal isOpen={confirmDialog.isOpen} title={confirmDialog.title} message={confirmDialog.message} confirmText="Confirm" isDestructive={true} onConfirm={confirmDialog.onConfirm} onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))} />
+
+          {editingPhysical && (
+            <EditPhysicalModal 
+              editing={editingPhysical} 
+              onClose={() => setEditingPhysical(null)} 
+              onSave={(updatedData) => {
+                let newBuys = buys;
+                let newSells = sells;
+                if (editingPhysical.type === 'buy') {
+                  newBuys = buys.map(b => b.id === updatedData.id ? updatedData : b);
+                  setBuys(newBuys);
+                } else {
+                  newSells = sells.map(s => s.id === updatedData.id ? updatedData : s);
+                  setSells(newSells);
+                }
+                saveToFirebase(newBuys, newSells, hedges, liveSettles, lotFxRates);
+                setEditingPhysical(null);
+                showToast("Updated successfully!");
+              }}
+            />
+          )}
+
+          {editingHedge && (
+            <EditHedgeModal 
+              editing={editingHedge} 
+              onClose={() => setEditingHedge(null)} 
+              onSave={(updatedData) => {
+                const newHedges = hedges.map(h => h.id === updatedData.id ? updatedData : h);
+                setHedges(newHedges);
+                saveToFirebase(buys, sells, newHedges, liveSettles, lotFxRates);
+                setEditingHedge(null);
+                showToast("Trade updated!");
+              }}
+            />
+          )}
+
           <AlertsDrawer isOpen={isAlertsDrawerOpen} onClose={() => setIsAlertsDrawerOpen(false)} alerts={engineResult.alerts} onSelectLot={setSelectedLot} onNavigateToPromptMatrix={promptDate => { setActiveTab('matrix'); setHighlightPrompt(promptDate); }} />
         </div>
       );
