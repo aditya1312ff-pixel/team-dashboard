@@ -15,29 +15,27 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Babel for JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- FIREBASE INITIALIZATION -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-
-    // ⚠️ PASTE YOUR FIREBASE CONFIG HERE (From Project Settings -> Web App) ⚠️
+  <!-- Firebase Compat (Non-Module) -->
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCtwnQS4EQaest7ifObsAeDy4CqMlxT8Po",
-      authDomain:"hedge-book-2c2b6.firebaseapp.com",
+      authDomain: "hedge-book-2c2b6.firebaseapp.com",
       projectId: "hedge-book-2c2b6",
       storageBucket: "hedge-book-2c2b6.firebasestorage.app",
       messagingSenderId: "567637201061",
       appId: "1:567637201061:web:ac4224e3fd5a2a7b037d4c"
     };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     
-    window.fbDB = db;
-    window.fbDoc = doc;
-    window.fbGetDoc = getDoc;
-    window.fbSetDoc = setDoc;
+    // Initialize Firebase using the global firebase object
+    firebase.initializeApp(firebaseConfig);
+    window.firebaseDB = firebase.firestore();
+    
+    // Create wrapper functions so the rest of the code works unchanged
+    window.firebaseDoc = (db, coll, doc) => db.collection(coll).doc(doc);
+    window.firebaseGetDoc = (docRef) => docRef.get();
+    window.firebaseSetDoc = (docRef, data) => docRef.set(data);
     
     window.dispatchEvent(new Event('firebase-ready'));
   </script>
