@@ -1072,15 +1072,23 @@
         try { localStorage.setItem('hb_theme', theme); } catch {}
         if (theme === 'light') document.documentElement.classList.add('light-theme'); else document.documentElement.classList.remove('light-theme');
       }, [theme]);
-
-      // LOAD FROM FIREBASE
+      // LOAD FROM FIREBASE (Safe Version)
       useEffect(() => {
+        let isMounted = true;
+        
         const loadData = async () => {
+          // Give Firebase script 1 second to load if it's slow
+          if (!window.firebaseDB) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+
           try {
+            if (!window.firebaseDB) throw new Error("Firebase script blocked by browser.");
+            
             const docRef = window.firebaseDoc(window.firebaseDB, "hedgebook", "data");
             const docSnap = await window.firebaseGetDoc(docRef);
             
-            if (docSnap.exists()) {
+            if (docSnap.exists() && isMounted) {
               const data = docSnap.data();
               setBuys(data.buys || []);
               setSells(data.sells || []);
@@ -1089,14 +1097,15 @@
               setLotFxRates(data.lotFxRates || {});
             }
           } catch (error) {
-            console.error("Error loading data:", error);
-            showToast("Error connecting to Firebase.");
+            console.error("Firebase Load Error:", error);
+          } finally {
+            if (isMounted) setIsDataLoaded(true);
           }
-          setIsDataLoaded(true);
         };
 
-        if (window.firebaseDB) loadData();
-        else window.addEventListener('firebase-ready', loadData);
+        loadData();
+        
+        return () => { isMounted = false; };
       }, []);
 
       // SAVE TO FIREBASE HELPER
