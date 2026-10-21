@@ -18,8 +18,8 @@
 
   <!-- FIREBASE INITIALIZATION -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
     // ⚠️ PASTE YOUR FIREBASE CONFIG HERE (From Project Settings -> Web App) ⚠️
     const firebaseConfig = {
@@ -1108,20 +1108,26 @@
         return () => { isMounted = false; };
       }, []);
 
-      // SAVE TO FIREBASE HELPER
+         // SAVE TO FIREBASE HELPER
       const saveToFirebase = async (newBuys, newSells, newHedges, newSettles, newFx) => {
         try {
+          // Wait for Firebase to load if it's slow
+          if (!window.firebaseDoc) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          }
+          
+          if (!window.firebaseDoc) throw new Error("Firebase script blocked by browser.");
+
           const docRef = window.firebaseDoc(window.firebaseDB, "hedgebook", "data");
           await window.firebaseSetDoc(docRef, {
             buys: newBuys, sells: newSells, hedges: newHedges, liveSettles: newSettles, lotFxRates: newFx
           });
-          console.log("Saved to Firebase");
+          console.log("Saved to Firebase successfully!");
         } catch (error) {
           console.error("Error saving:", error);
-          showToast("Failed to save to cloud.");
+          showToast("Failed to save to cloud. Check console.");
         }
       };
-
       const defaultFx = 84.2;
       const [activeTab, setActiveTab] = useState('matrix');
       const [currentMetal, setCurrentMetal] = useState('BOTH');
