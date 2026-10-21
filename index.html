@@ -1086,8 +1086,8 @@
             const docRef = window.firebaseDoc(window.firebaseDB, "hedgebook", "data");
             const docSnap = await window.firebaseGetDoc(docRef);
             
-            if (docSnap.exists() && isMounted) {
-              const data = docSnap.data();
+             if (docSnap.exists && isMounted) {
+             const data = docSnap.data() || docSnap;
               setBuys(data.buys || []);
               setSells(data.sells || []);
               setHedges(data.hedges || []);
