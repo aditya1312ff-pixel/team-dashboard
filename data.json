@@ -1,1 +1,4 @@
-
+[
+  { "date": "2026-10-21", "total": 1500, "notes": "First day of data" },
+  { "date": "2026-10-22", "total": 2300, "notes": "Sales went up" }
+]
