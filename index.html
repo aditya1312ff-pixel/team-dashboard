@@ -970,7 +970,7 @@
     };
 
     // ==================== EDIT MODALS ====================
-    const EditPhysicalModal = ({ editing, onClose, onSave }) => {
+        const EditPhysicalModal = ({ editing, onClose, onSave }) => {
       const [formData, setFormData] = useState(editing.data);
       if (!editing) return null;
       const isBuy = editing.type === 'buy';
@@ -998,6 +998,7 @@
             };
             reader.readAsDataURL(file);
           } else {
+            // For PDFs, just save the name so it doesn't break the database
             setFormData({ ...formData, file: file.name, fileData: null });
           }
         } else {
