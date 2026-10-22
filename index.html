@@ -911,11 +911,26 @@
     };
 
     // ==================== EDIT MODALS ====================
-    const EditPhysicalModal = ({ editing, onClose, onSave }) => {
+       const EditPhysicalModal = ({ editing, onClose, onSave }) => {
       const [formData, setFormData] = useState(editing.data);
       if (!editing) return null;
       const isBuy = editing.type === 'buy';
+      
       const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+      
+      const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setFormData({ ...formData, file: file.name, fileData: reader.result });
+          };
+          reader.readAsDataURL(file);
+        } else {
+          setFormData({ ...formData, file: 'No File', fileData: null });
+        }
+      };
+
       return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-[#111c33] border border-[#1e2d4d] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
@@ -925,7 +940,30 @@
               <div><label className="text-slate-400 block mb-1">Date</label><input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
               <div><label className="text-slate-400 block mb-1">Qty (MT)</label><input type="number" name="qty" value={formData.qty} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
               <div><label className="text-slate-400 block mb-1">{isBuy ? 'Landed Price' : 'Sell Price'}</label><input type="number" name={isBuy ? 'landed' : 'price'} value={isBuy ? formData.landed : formData.price} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
-              <div className="col-span-2"><label className="text-slate-400 block mb-1">{isBuy ? 'Supplier' : 'Buyer'}</label><input name="cat" value={formData.cat || ''} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white" /></div>
+              
+              {/* Supplier / Buyer Name */}
+              <div className="col-span-2">
+                <label className="text-slate-400 block mb-1">{isBuy ? 'Supplier / CAT' : 'Buyer / CAT'}</label>
+                <input name="cat" value={formData.cat || ''} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white" />
+              </div>
+
+              {/* Document Upload for Purchases Only */}
+              {isBuy && (
+                <div className="col-span-2">
+                  <label className="text-slate-400 block mb-1">Attach Purchase Agreement (PDF)</label>
+                  <input 
+                    type="file" 
+                    accept=".pdf,.doc,.docx" 
+                    onChange={handleFileChange} 
+                    className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-[#16223d] file:text-blue-300 hover:file:bg-[#1e2d4d] cursor-pointer border border-[#1e2d4d] rounded-xl bg-[#0b1220] py-1.5" 
+                  />
+                  {formData.file && formData.file !== 'No File' && (
+                    <div className="text-[10px] text-emerald-400 mt-1 truncate">
+                      Current: {formData.file}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={onClose} className="px-3 py-1.5 text-xs text-slate-400 hover:text-white">Cancel</button>
@@ -935,7 +973,6 @@
         </div>
       );
     };
-
     const EditHedgeModal = ({ editing, onClose, onSave }) => {
       const [formData, setFormData] = useState(editing);
       if (!editing) return null;
