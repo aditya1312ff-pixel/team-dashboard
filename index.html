@@ -615,11 +615,41 @@
           <div className="bg-[#111c33] border border-[#1e2d4d] rounded-2xl shadow-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left border-collapse">
-                <thead><tr className="bg-[#16223d] text-slate-400 uppercase text-[10.5px] font-semibold border-b border-[#1e2d4d]"><th className="py-3 px-4">Lot ID</th><th className="py-3 px-3">Metal</th><th className="py-3 px-3">Buy Date</th><th className="py-3 px-3 text-right">Buy Qty (MT)</th><th className="py-3 px-3 text-right">Buy Landed Price</th><th className="py-3 px-3 text-right">Sold Qty (MT)</th><th className="py-3 px-3 text-right">Avg Sell Price</th><th className="py-3 px-3 text-right">In Stock (MT)</th><th className="py-3 px-3 text-right">Realized PnL</th><th className="py-3 px-4">Status</th></tr></thead>
+                <thead>
+                  <tr className="bg-[#16223d] text-slate-400 uppercase text-[10.5px] font-semibold border-b border-[#1e2d4d]">
+                    <th className="py-3 px-4">Lot ID</th>
+                    <th className="py-3 px-3">Metal</th>
+                    <th className="py-3 px-3">Supplier</th>
+                    <th className="py-3 px-3">Buyer / Seller</th>
+                    <th className="py-3 px-3">Buy Date</th>
+                    <th className="py-3 px-3 text-right">Buy Qty (MT)</th>
+                    <th className="py-3 px-3 text-right">Buy Landed Price</th>
+                    <th className="py-3 px-3 text-right">Sold Qty (MT)</th>
+                    <th className="py-3 px-3 text-right">Avg Sell Price</th>
+                    <th className="py-3 px-3 text-right">In Stock (MT)</th>
+                    <th className="py-3 px-3 text-right">Realized PnL</th>
+                    <th className="py-3 px-4">Status</th>
+                  </tr>
+                </thead>
                 <tbody className="divide-y divide-[#182543] font-mono">
                   {filtered.map(r => (
                     <tr key={r.lot} onClick={() => onSelectLot(r.lot)} className="hover:bg-[#16223d]/70 cursor-pointer">
-                      <td className="py-3 px-4 font-bold text-white">{r.lot}</td><td className="py-3 px-3 font-sans">{shortMetal(r.metal)}</td><td className="py-3 px-3 font-sans text-slate-400">{fmtD(r.physBuyDate)}</td><td className="py-3 px-3 text-right font-bold text-slate-300">{fmt(r.physBuyQty, 2)}</td><td className="py-3 px-3 text-right text-slate-300">₹{fmt(r.physBuyPrice, 2)}</td><td className="py-3 px-3 text-right text-slate-300">{fmt(r.physSellQty, 2)}</td><td className="py-3 px-3 text-right text-slate-300">{r.physSellPrice ? `₹${fmt(r.physSellPrice, 2)}` : '—'}</td><td className="py-3 px-3 text-right font-bold text-slate-100">{fmt(r.physInStockQty, 2)}</td><td className={`py-3 px-3 text-right font-bold ${pnlClass(r.physRealizedPnL)}`}>{fmt(r.physRealizedPnL)}</td><td className="py-3 px-4 font-sans text-slate-300">{r.physStatus}</td>
+                      <td className="py-3 px-4 font-bold text-white">{r.lot}</td>
+                      <td className="py-3 px-3 font-sans">{shortMetal(r.metal)}</td>
+                      <td className="py-3 px-3 font-sans text-slate-300 truncate max-w-[120px]" title={r.buyerNames?.join(', ')}>
+                        {r.buyerNames?.join(', ') || '—'}
+                      </td>
+                      <td className="py-3 px-3 font-sans text-slate-300 truncate max-w-[120px]" title={r.sellerNames?.join(', ')}>
+                        {r.sellerNames?.join(', ') || '—'}
+                      </td>
+                      <td className="py-3 px-3 font-sans text-slate-400">{fmtD(r.physBuyDate)}</td>
+                      <td className="py-3 px-3 text-right font-bold text-slate-300">{fmt(r.physBuyQty, 2)}</td>
+                      <td className="py-3 px-3 text-right text-slate-300">₹{fmt(r.physBuyPrice, 2)}</td>
+                      <td className="py-3 px-3 text-right text-slate-300">{fmt(r.physSellQty, 2)}</td>
+                      <td className="py-3 px-3 text-right text-slate-300">{r.physSellPrice ? `₹${fmt(r.physSellPrice, 2)}` : '—'}</td>
+                      <td className="py-3 px-3 text-right font-bold text-slate-100">{fmt(r.physInStockQty, 2)}</td>
+                      <td className={`py-3 px-3 text-right font-bold ${pnlClass(r.physRealizedPnL)}`}>{fmt(r.physRealizedPnL)}</td>
+                      <td className="py-3 px-4 font-sans text-slate-300">{r.physStatus}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -706,9 +736,38 @@
         return (csp + prem) * usd * (1 + duty / 100); 
       };
 
-      const handleFileChange = (e) => { const file = e.target.files?.[0]; if (file) { setBuyFileName(file.name); const reader = new FileReader(); reader.onloadend = () => { setBuyFileData(reader.result); }; reader.readAsDataURL(file); } else { setBuyFileName('No File'); setBuyFileData(null); } };
+      const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          setBuyFileName(file.name);
+          if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 600; 
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH; canvas.height = img.height * scaleSize;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const compressedData = canvas.toDataURL('image/jpeg', 0.6);
+                setBuyFileData(compressedData);
+              };
+              img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+          } else {
+            setBuyFileData(null);
+          }
+        } else {
+          setBuyFileName('No File'); setBuyFileData(null);
+        }
+      };
+
       const handleSaveBuy = (e) => { e.preventDefault(); if (!buyLot.trim()) return; const qty = parseFloat(buyQty) || 0; if (qty <= 0) return; const landed = calculateLanded(); onAddBuy({ id: `buy-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, lot: buyLot.trim().toUpperCase(), cat: buyCat.trim(), metal: buyMetal, exch: buyExch, date: buyDate, qty, csp: parseFloat(buyCsp) || 0, prem: parseFloat(buyPrem) || 0, usd: parseFloat(buyUsd) || 1, duty, landed, file: buyFileName, fileData: buyFileData }); setBuyLot(''); setBuyQty(''); setBuyCsp(''); setBuyFileName('No File'); setBuyFileData(null); };
       const handleSaveSell = (e) => { e.preventDefault(); if (!sellLot.trim()) return; const qty = parseFloat(sellQty) || 0; const price = parseFloat(sellPrice) || 0; if (qty <= 0 || price <= 0) return; onAddSell({ id: `sell-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, lot: sellLot.trim().toUpperCase(), cat: sellCat.trim(), date: sellDate, qty, price }); setSellLot(''); setSellQty(''); setSellPrice(''); };
+      
       return (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -728,7 +787,7 @@
 
                   {buyExch === 'LME' && (<div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">USDINR</label><input type="number" step="any" value={buyUsd} onChange={e => setBuyUsd(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div>)}
                   
-                  <div className="col-span-2 sm:col-span-3"><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Upload Purchase Agreement (PDF)</label><input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-[#16223d] file:text-blue-300 hover:file:bg-[#1e2d4d] cursor-pointer border border-[#1e2d4d] rounded-xl bg-[#0b1220] py-1.5" /></div>
+                  <div className="col-span-2 sm:col-span-3"><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Upload Purchase Agreement (Image / PDF)</label><input type="file" accept=".pdf,.doc,.docx,image/*" onChange={handleFileChange} className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-[#16223d] file:text-blue-300 hover:file:bg-[#1e2d4d] cursor-pointer border border-[#1e2d4d] rounded-xl bg-[#0b1220] py-1.5" /></div>
                 </div>
                 <div className="p-3 bg-black/20 rounded-xl border border-slate-800 flex items-center justify-between text-xs"><span className="text-slate-400">Effective Landed Cost:</span><span className="font-mono font-bold text-sm text-emerald-400">₹{fmt(calculateLanded(), 2)} / MT</span></div>
                 <button type="submit" className="w-full py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md cursor-pointer">Save Physical Purchase Record</button>
@@ -755,9 +814,9 @@
               <div className="px-5 py-3 border-b border-[#1e2d4d] bg-[#16223d]"><h4 className="text-xs font-bold uppercase text-slate-300">Physical Purchases Log ({buys.length})</h4></div>
               <div className="overflow-x-auto max-h-80">
                 <table className="w-full text-xs text-left">
-                  <thead><tr className="bg-[#16223d] text-slate-400 text-[10.5px] uppercase font-semibold"><th className="py-2.5 px-3">Lot ID</th><th className="py-2.5 px-2">Metal</th><th className="py-2.5 px-2">Date</th><th className="py-2.5 px-2 text-right">Qty (MT)</th><th className="py-2.5 px-2 text-right">Landed Price</th><th className="py-2.5 px-2 text-center">Doc</th><th className="py-2.5 px-3 text-center">Actions</th></tr></thead>
+                  <thead><tr className="bg-[#16223d] text-slate-400 text-[10.5px] uppercase font-semibold"><th className="py-2.5 px-3">Lot ID</th><th className="py-2.5 px-2">Supplier</th><th className="py-2.5 px-2">Metal</th><th className="py-2.5 px-2">Date</th><th className="py-2.5 px-2 text-right">Qty (MT)</th><th className="py-2.5 px-2 text-right">Landed Price</th><th className="py-2.5 px-2 text-center">Doc</th><th className="py-2.5 px-3 text-center">Actions</th></tr></thead>
                   <tbody className="divide-y divide-[#182543] font-mono">
-                    {buys.map(b => (<tr key={b.id} className="hover:bg-[#16223d]/50"><td className="py-2 px-3 font-bold text-white">{b.lot}</td><td className="py-2 px-2 font-sans">{shortMetal(b.metal)}</td><td className="py-2 px-2 text-slate-400">{fmtD(b.date)}</td><td className="py-2 px-2 text-right">{fmt(b.qty, 2)}</td><td className="py-2 px-2 text-right">₹{fmt(b.landed, 2)}</td><td className="py-2 px-2 text-center">{b.fileData ? (<a href={b.fileData} target="_blank" rel="noopener noreferrer" title={`View ${b.file}`} className="text-emerald-400 hover:text-emerald-300"><FileText className="w-3.5 h-3.5 inline" /></a>) : (<span title="No Document" className="text-slate-600"><FileText className="w-3.5 h-3.5 inline" /></span>)}</td><td className="py-2 px-3 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => setEditingPhysical({ type: 'buy', data: b })} className="text-blue-400 hover:text-blue-300 p-1 cursor-pointer" title="Edit"><Edit className="w-3.5 h-3.5" /></button><button onClick={() => onDeleteBuy(b.id)} className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td></tr>))}
+                    {buys.map(b => (<tr key={b.id} className="hover:bg-[#16223d]/50"><td className="py-2 px-3 font-bold text-white">{b.lot}</td><td className="py-2 px-2 font-sans text-slate-300 truncate max-w-[120px]" title={b.cat}>{b.cat || '—'}</td><td className="py-2 px-2 font-sans">{shortMetal(b.metal)}</td><td className="py-2 px-2 text-slate-400">{fmtD(b.date)}</td><td className="py-2 px-2 text-right">{fmt(b.qty, 2)}</td><td className="py-2 px-2 text-right">₹{fmt(b.landed, 2)}</td><td className="py-2 px-2 text-center">{b.fileData ? (<a href={b.fileData} target="_blank" rel="noopener noreferrer" title={`View ${b.file}`} className="text-emerald-400 hover:text-emerald-300"><FileText className="w-3.5 h-3.5 inline" /></a>) : (<span title={b.file || "No Document"} className="text-slate-600"><FileText className="w-3.5 h-3.5 inline" /></span>)}</td><td className="py-2 px-3 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => setEditingPhysical({ type: 'buy', data: b })} className="text-blue-400 hover:text-blue-300 p-1 cursor-pointer" title="Edit"><Edit className="w-3.5 h-3.5" /></button><button onClick={() => onDeleteBuy(b.id)} className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td></tr>))}
                   </tbody>
                 </table>
               </div>
@@ -911,7 +970,7 @@
     };
 
     // ==================== EDIT MODALS ====================
-       const EditPhysicalModal = ({ editing, onClose, onSave }) => {
+    const EditPhysicalModal = ({ editing, onClose, onSave }) => {
       const [formData, setFormData] = useState(editing.data);
       if (!editing) return null;
       const isBuy = editing.type === 'buy';
@@ -921,11 +980,26 @@
       const handleFileChange = (e) => {
         const file = e.target.files?.[0];
         if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setFormData({ ...formData, file: file.name, fileData: reader.result });
-          };
-          reader.readAsDataURL(file);
+          if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 600; 
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH; canvas.height = img.height * scaleSize;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const compressedData = canvas.toDataURL('image/jpeg', 0.6);
+                setFormData({ ...formData, file: file.name, fileData: compressedData });
+              };
+              img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+          } else {
+            setFormData({ ...formData, file: file.name, fileData: null });
+          }
         } else {
           setFormData({ ...formData, file: 'No File', fileData: null });
         }
@@ -941,27 +1015,16 @@
               <div><label className="text-slate-400 block mb-1">Qty (MT)</label><input type="number" name="qty" value={formData.qty} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
               <div><label className="text-slate-400 block mb-1">{isBuy ? 'Landed Price' : 'Sell Price'}</label><input type="number" name={isBuy ? 'landed' : 'price'} value={isBuy ? formData.landed : formData.price} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white font-mono" /></div>
               
-              {/* Supplier / Buyer Name */}
               <div className="col-span-2">
                 <label className="text-slate-400 block mb-1">{isBuy ? 'Supplier / CAT' : 'Buyer / CAT'}</label>
                 <input name="cat" value={formData.cat || ''} onChange={handleChange} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded px-2 py-1.5 text-white" />
               </div>
 
-              {/* Document Upload for Purchases Only */}
               {isBuy && (
                 <div className="col-span-2">
-                  <label className="text-slate-400 block mb-1">Attach Purchase Agreement (PDF)</label>
-                  <input 
-                    type="file" 
-                    accept=".pdf,.doc,.docx" 
-                    onChange={handleFileChange} 
-                    className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-[#16223d] file:text-blue-300 hover:file:bg-[#1e2d4d] cursor-pointer border border-[#1e2d4d] rounded-xl bg-[#0b1220] py-1.5" 
-                  />
-                  {formData.file && formData.file !== 'No File' && (
-                    <div className="text-[10px] text-emerald-400 mt-1 truncate">
-                      Current: {formData.file}
-                    </div>
-                  )}
+                  <label className="text-slate-400 block mb-1">Attach Purchase Agreement</label>
+                  <input type="file" accept=".pdf,image/*" onChange={handleFileChange} className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-[#16223d] file:text-blue-300 hover:file:bg-[#1e2d4d] cursor-pointer border border-[#1e2d4d] rounded-xl bg-[#0b1220] py-1.5" />
+                  {formData.file && formData.file !== 'No File' && (<div className="text-[10px] text-emerald-400 mt-1 truncate">Current: {formData.file}</div>)}
                 </div>
               )}
             </div>
@@ -973,6 +1036,7 @@
         </div>
       );
     };
+
     const EditHedgeModal = ({ editing, onClose, onSave }) => {
       const [formData, setFormData] = useState(editing);
       if (!editing) return null;
