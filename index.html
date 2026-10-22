@@ -693,7 +693,19 @@
       const [buyFileName, setBuyFileName] = useState('No File'); const [buyFileData, setBuyFileData] = useState(null);
       const [sellLot, setSellLot] = useState(''); const [sellCat, setSellCat] = useState(''); const [sellDate, setSellDate] = useState(new Date().toISOString().slice(0, 10)); const [sellQty, setSellQty] = useState(''); const [sellPrice, setSellPrice] = useState('');
       const duty = getDuty(buyMetal);
-      const calculateLanded = () => { const csp = parseFloat(buyCsp) || 0; if (buyExch === 'MCX') return csp; const prem = parseFloat(buyPrem) || 0; const usd = parseFloat(buyUsd) || 1; return (csp + prem) * usd * (1 + duty / 100); };
+      
+      const calculateLanded = () => { 
+        if (buyExch === 'MCX') {
+          const basePrice = parseFloat(buyCsp) || 0;
+          const prem = parseFloat(buyPrem) || 0;
+          return basePrice + prem;
+        }
+        const csp = parseFloat(buyCsp) || 0; 
+        const prem = parseFloat(buyPrem) || 0; 
+        const usd = parseFloat(buyUsd) || 1; 
+        return (csp + prem) * usd * (1 + duty / 100); 
+      };
+
       const handleFileChange = (e) => { const file = e.target.files?.[0]; if (file) { setBuyFileName(file.name); const reader = new FileReader(); reader.onloadend = () => { setBuyFileData(reader.result); }; reader.readAsDataURL(file); } else { setBuyFileName('No File'); setBuyFileData(null); } };
       const handleSaveBuy = (e) => { e.preventDefault(); if (!buyLot.trim()) return; const qty = parseFloat(buyQty) || 0; if (qty <= 0) return; const landed = calculateLanded(); onAddBuy({ id: `buy-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, lot: buyLot.trim().toUpperCase(), cat: buyCat.trim(), metal: buyMetal, exch: buyExch, date: buyDate, qty, csp: parseFloat(buyCsp) || 0, prem: parseFloat(buyPrem) || 0, usd: parseFloat(buyUsd) || 1, duty, landed, file: buyFileName, fileData: buyFileData }); setBuyLot(''); setBuyQty(''); setBuyCsp(''); setBuyFileName('No File'); setBuyFileData(null); };
       const handleSaveSell = (e) => { e.preventDefault(); if (!sellLot.trim()) return; const qty = parseFloat(sellQty) || 0; const price = parseFloat(sellPrice) || 0; if (qty <= 0 || price <= 0) return; onAddSell({ id: `sell-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, lot: sellLot.trim().toUpperCase(), cat: sellCat.trim(), date: sellDate, qty, price }); setSellLot(''); setSellQty(''); setSellPrice(''); };
@@ -710,8 +722,12 @@
                   <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Pricing Basis</label><select value={buyExch} onChange={e => setBuyExch(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100"><option value="LME">LME Import Formula</option><option value="MCX">Direct INR Landed</option></select></div>
                   <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Buy Date</label><input type="date" value={buyDate} onChange={e => setBuyDate(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div>
                   <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Buy Qty (MT) *</label><input type="number" step="any" placeholder="0.00" value={buyQty} onChange={e => setBuyQty(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono font-bold" required /></div>
-                  <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">{buyExch === 'LME' ? 'CSP ($ / MT)' : 'Direct Landed (₹/MT)'}</label><input type="number" step="any" placeholder="0.00" value={buyCsp} onChange={e => setBuyCsp(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div>
-                  {buyExch === 'LME' && (<><div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Premium ($)</label><input type="number" step="any" value={buyPrem} onChange={e => setBuyPrem(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div><div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">USDINR</label><input type="number" step="any" value={buyUsd} onChange={e => setBuyUsd(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div></>)}
+                  
+                  <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">{buyExch === 'LME' ? 'CSP ($ / MT)' : 'Base MCX Price (₹/MT)'}</label><input type="number" step="any" placeholder="0.00" value={buyCsp} onChange={e => setBuyCsp(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div>
+                  <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">{buyExch === 'LME' ? 'Premium ($)' : 'Premium / Disc (₹/MT)'}</label><input type="number" step="any" value={buyPrem} onChange={e => setBuyPrem(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div>
+
+                  {buyExch === 'LME' && (<div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">USDINR</label><input type="number" step="any" value={buyUsd} onChange={e => setBuyUsd(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div>)}
+                  
                   <div className="col-span-2 sm:col-span-3"><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Upload Purchase Agreement (PDF)</label><input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-[#16223d] file:text-blue-300 hover:file:bg-[#1e2d4d] cursor-pointer border border-[#1e2d4d] rounded-xl bg-[#0b1220] py-1.5" /></div>
                 </div>
                 <div className="p-3 bg-black/20 rounded-xl border border-slate-800 flex items-center justify-between text-xs"><span className="text-slate-400">Effective Landed Cost:</span><span className="font-mono font-bold text-sm text-emerald-400">₹{fmt(calculateLanded(), 2)} / MT</span></div>
