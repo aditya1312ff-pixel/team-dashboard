@@ -718,7 +718,7 @@
       );
     };
 
-        const PhysicalEntry = ({ buys, sells, onAddBuy, onAddSell, onDeleteBuy, onDeleteSell, setEditingPhysical }) => {
+    const PhysicalEntry = ({ buys, sells, onAddBuy, onAddSell, onDeleteBuy, onDeleteSell, setEditingPhysical }) => {
       const [buyLot, setBuyLot] = useState(''); const [buyCat, setBuyCat] = useState(''); const [buyMetal, setBuyMetal] = useState('AL'); const [buyExch, setBuyExch] = useState('LME'); const [buyDate, setBuyDate] = useState(new Date().toISOString().slice(0, 10)); const [buyQty, setBuyQty] = useState(''); const [buyCsp, setBuyCsp] = useState(''); const [buyPrem, setBuyPrem] = useState('0'); const [buyUsd, setBuyUsd] = useState('84.2');
       const [buyFileName, setBuyFileName] = useState('No File'); const [buyFileData, setBuyFileData] = useState(null);
       const [sellLot, setSellLot] = useState(''); const [sellCat, setSellCat] = useState(''); const [sellDate, setSellDate] = useState(new Date().toISOString().slice(0, 10)); const [sellQty, setSellQty] = useState(''); const [sellPrice, setSellPrice] = useState('');
@@ -743,7 +743,6 @@
           const reader = new FileReader();
           reader.onloadend = () => {
             if (file.type.startsWith('image/')) {
-              // Compress images so they fit in Firebase
               const img = new Image();
               img.onload = () => {
                 const canvas = document.createElement('canvas');
@@ -756,7 +755,6 @@
               };
               img.src = reader.result;
             } else {
-              // For PDFs, we save the base64 string directly
               setBuyFileData(reader.result);
             }
           };
@@ -838,78 +836,6 @@
       );
     };
 
-      const handleSaveBuy = (e) => { e.preventDefault(); if (!buyLot.trim()) return; const qty = parseFloat(buyQty) || 0; if (qty <= 0) return; const landed = calculateLanded(); onAddBuy({ id: `buy-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, lot: buyLot.trim().toUpperCase(), cat: buyCat.trim(), metal: buyMetal, exch: buyExch, date: buyDate, qty, csp: parseFloat(buyCsp) || 0, prem: parseFloat(buyPrem) || 0, usd: parseFloat(buyUsd) || 1, duty, landed, file: buyFileName, fileData: buyFileData }); setBuyLot(''); setBuyQty(''); setBuyCsp(''); setBuyFileName('No File'); setBuyFileData(null); };
-      const handleSaveSell = (e) => { e.preventDefault(); if (!sellLot.trim()) return; const qty = parseFloat(sellQty) || 0; const price = parseFloat(sellPrice) || 0; if (qty <= 0 || price <= 0) return; onAddSell({ id: `sell-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, lot: sellLot.trim().toUpperCase(), cat: sellCat.trim(), date: sellDate, qty, price }); setSellLot(''); setSellQty(''); setSellPrice(''); };
-      
-      return (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-b from-[#111c33] to-[#16223d] border border-[#1e2d4d] rounded-2xl p-5 shadow-xl">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-blue-400 mb-4 flex items-center gap-2"><PlusCircle className="w-4 h-4" /><span>Add Metal Physical Purchase</span></h3>
-              <form onSubmit={handleSaveBuy} className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Lot ID *</label><input type="text" placeholder="e.g. AL1" value={buyLot} onChange={e => setBuyLot(e.target.value.toUpperCase())} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono font-bold uppercase" required /></div>
-                  <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Supplier / CAT</label><input type="text" placeholder="Supplier name" value={buyCat} onChange={e => setBuyCat(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100" /></div>
-                  <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Metal</label><select value={buyMetal} onChange={e => setBuyMetal(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100"><option value="AL">Aluminium (AL)</option><option value="ZN">Zinc (ZN)</option><option value="CU">Copper (CU)</option><option value="PB">Lead (PB)</option></select></div>
-                  <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Pricing Basis</label><select value={buyExch} onChange={e => setBuyExch(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100"><option value="LME">LME Import Formula</option><option value="MCX">Direct INR Landed</option></select></div>
-                  <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Buy Date</label><input type="date" value={buyDate} onChange={e => setBuyDate(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div>
-                  <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Buy Qty (MT) *</label><input type="number" step="any" placeholder="0.00" value={buyQty} onChange={e => setBuyQty(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono font-bold" required /></div>
-                  
-                  <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">{buyExch === 'LME' ? 'CSP ($ / MT)' : 'Base MCX Price (₹/MT)'}</label><input type="number" step="any" placeholder="0.00" value={buyCsp} onChange={e => setBuyCsp(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div>
-                  <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">{buyExch === 'LME' ? 'Premium ($)' : 'Premium / Disc (₹/MT)'}</label><input type="number" step="any" value={buyPrem} onChange={e => setBuyPrem(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div>
-
-                  {buyExch === 'LME' && (<div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">USDINR</label><input type="number" step="any" value={buyUsd} onChange={e => setBuyUsd(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div>)}
-                  
-                  <div className="col-span-2 sm:col-span-3"><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Upload Purchase Agreement (Image / PDF)</label><input type="file" accept=".pdf,.doc,.docx,image/*" onChange={handleFileChange} className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-[#16223d] file:text-blue-300 hover:file:bg-[#1e2d4d] cursor-pointer border border-[#1e2d4d] rounded-xl bg-[#0b1220] py-1.5" /></div>
-                </div>
-                <div className="p-3 bg-black/20 rounded-xl border border-slate-800 flex items-center justify-between text-xs"><span className="text-slate-400">Effective Landed Cost:</span><span className="font-mono font-bold text-sm text-emerald-400">₹{fmt(calculateLanded(), 2)} / MT</span></div>
-                <button type="submit" className="w-full py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md cursor-pointer">Save Physical Purchase Record</button>
-              </form>
-            </div>
-            <div className="bg-gradient-to-b from-[#111c33] to-[#16223d] border border-[#1e2d4d] rounded-2xl p-5 shadow-xl flex flex-col justify-between">
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-400 mb-4 flex items-center gap-2"><PlusCircle className="w-4 h-4" /><span>Add Metal Physical Sale</span></h3>
-                <form onSubmit={handleSaveSell} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Lot ID *</label><input type="text" placeholder="e.g. AL1" value={sellLot} onChange={e => setSellLot(e.target.value.toUpperCase())} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono font-bold uppercase" required /></div>
-                    <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Buyer / CAT</label><input type="text" placeholder="Buyer name" value={sellCat} onChange={e => setSellCat(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100" /></div>
-                    <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Sale Date</label><input type="date" value={sellDate} onChange={e => setSellDate(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono" /></div>
-                    <div><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Sold Qty (MT) *</label><input type="number" step="any" placeholder="0.00" value={sellQty} onChange={e => setSellQty(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono font-bold" required /></div>
-                    <div className="col-span-2"><label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Sell Price (₹ / MT) *</label><input type="number" step="any" placeholder="0.00" value={sellPrice} onChange={e => setSellPrice(e.target.value)} className="w-full bg-[#0b1220] border border-[#1e2d4d] rounded-xl px-3 py-2 text-xs text-slate-100 font-mono font-bold" required /></div>
-                  </div>
-                  <button type="submit" className="w-full py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md cursor-pointer">Save Physical Sale Record</button>
-                </form>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-[#111c33] border border-[#1e2d4d] rounded-2xl shadow-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-[#1e2d4d] bg-[#16223d]"><h4 className="text-xs font-bold uppercase text-slate-300">Physical Purchases Log ({buys.length})</h4></div>
-              <div className="overflow-x-auto max-h-80">
-                <table className="w-full text-xs text-left">
-                  <thead><tr className="bg-[#16223d] text-slate-400 text-[10.5px] uppercase font-semibold"><th className="py-2.5 px-3">Lot ID</th><th className="py-2.5 px-2">Supplier</th><th className="py-2.5 px-2">Metal</th><th className="py-2.5 px-2">Date</th><th className="py-2.5 px-2 text-right">Qty (MT)</th><th className="py-2.5 px-2 text-right">Landed Price</th><th className="py-2.5 px-2 text-center">Doc</th><th className="py-2.5 px-3 text-center">Actions</th></tr></thead>
-                  <tbody className="divide-y divide-[#182543] font-mono">
-                    {buys.map(b => (<tr key={b.id} className="hover:bg-[#16223d]/50"><td className="py-2 px-3 font-bold text-white">{b.lot}</td><td className="py-2 px-2 font-sans text-slate-300 truncate max-w-[120px]" title={b.cat}>{b.cat || '—'}</td><td className="py-2 px-2 font-sans">{shortMetal(b.metal)}</td><td className="py-2 px-2 text-slate-400">{fmtD(b.date)}</td><td className="py-2 px-2 text-right">{fmt(b.qty, 2)}</td><td className="py-2 px-2 text-right">₹{fmt(b.landed, 2)}</td><td className="py-2 px-2 text-center">{b.fileData ? (<a href={b.fileData} target="_blank" rel="noopener noreferrer" title={`View ${b.file}`} className="text-emerald-400 hover:text-emerald-300"><FileText className="w-3.5 h-3.5 inline" /></a>) : (<span title={b.file || "No Document"} className="text-slate-600"><FileText className="w-3.5 h-3.5 inline" /></span>)}</td><td className="py-2 px-3 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => setEditingPhysical({ type: 'buy', data: b })} className="text-blue-400 hover:text-blue-300 p-1 cursor-pointer" title="Edit"><Edit className="w-3.5 h-3.5" /></button><button onClick={() => onDeleteBuy(b.id)} className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td></tr>))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div className="bg-[#111c33] border border-[#1e2d4d] rounded-2xl shadow-xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-[#1e2d4d] bg-[#16223d]"><h4 className="text-xs font-bold uppercase text-slate-300">Physical Sales Log ({sells.length})</h4></div>
-              <div className="overflow-x-auto max-h-80">
-                <table className="w-full text-xs text-left">
-                  <thead><tr className="bg-[#16223d] text-slate-400 text-[10.5px] uppercase font-semibold"><th className="py-2.5 px-3">Lot ID</th><th className="py-2.5 px-2">Buyer</th><th className="py-2.5 px-2">Date</th><th className="py-2.5 px-2 text-right">Sold Qty (MT)</th><th className="py-2.5 px-2 text-right">Sell Price</th><th className="py-2.5 px-3 text-center">Actions</th></tr></thead>
-                  <tbody className="divide-y divide-[#182543] font-mono">
-                    {sells.map(s => (<tr key={s.id} className="hover:bg-[#16223d]/50"><td className="py-2 px-3 font-bold text-white">{s.lot}</td><td className="py-2 px-2 font-sans text-slate-300">{s.cat || '—'}</td><td className="py-2 px-2 text-slate-400">{fmtD(s.date)}</td><td className="py-2 px-2 text-right">{fmt(s.qty, 2)}</td><td className="py-2 px-2 text-right">₹{fmt(s.price, 2)}</td><td className="py-2 px-3 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => setEditingPhysical({ type: 'sell', data: s })} className="text-blue-400 hover:text-blue-300 p-1 cursor-pointer" title="Edit"><Edit className="w-3.5 h-3.5" /></button><button onClick={() => onDeleteSell(s.id)} className="text-rose-400 hover:text-rose-300 p-1 cursor-pointer" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td></tr>))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
     const HedgeMapper = ({ hedges, liveSettles, onImportTrades, onAddHedgeTrade, onUpdateHedgeTrade, onDeleteHedgeTrade, onAddLiveSettle, onDeleteLiveSettle, onSyncOpenPrompts, onOpenBulkPasteModal, onClearMappedTrades, onRestoreArchivedTrades, onDeleteAllHedgeTrades, archivedCount, setEditingHedge }) => {
       const [tradeId, setTradeId] = useState(''); const [exch, setExch] = useState('MCX'); const [metal, setMetal] = useState('AL'); const [broker, setBroker] = useState('MOTILAL'); const [date, setDate] = useState(new Date().toISOString().slice(0, 10)); const [prompt, setPrompt] = useState(''); const [buyQty, setBuyQty] = useState(''); const [buyRate, setBuyRate] = useState(''); const [sellQty, setSellQty] = useState(''); const [sellRate, setSellRate] = useState(''); const [mappedLot, setMappedLot] = useState(''); const [mcxDefaultSide, setMcxDefaultSide] = useState('SELL');
       const [liveMetal, setLiveMetal] = useState('AL'); const [liveExch, setLiveExch] = useState('MCX'); const [livePrompt, setLivePrompt] = useState(''); const [liveSettle, setLiveSettle] = useState('');
@@ -918,10 +844,12 @@
       const tradesPerMonth = useMemo(() => { const counts = {}; hedges.forEach(h => { if (h.archived) return; const targetDate = monthBasis === 'prompt' ? h.prompt : h.date; const clean = dkey(targetDate); if (clean && clean.length >= 7) { const m = clean.slice(5, 7); counts[m] = (counts[m] || 0) + 1; } }); return counts; }, [hedges, monthBasis]);
       const getCol = (row, ...names) => { const keys = Object.keys(row || {}); for (const name of names) { const target = name.trim().toLowerCase().replace(/[\s_-]+/g, ''); for (const k of keys) { const cleanKey = k.replace(/^[\uFEFF\s]+|[\s]+$/g, '').toLowerCase().replace(/[\s_-]+/g, ''); if (cleanKey === target || cleanKey.includes(target)) return row[k]; } } return ''; };
       const handleFileUpload = (e) => { const files = Array.from(e.target.files || []); if (!files.length) return; files.forEach(file => { if (/\.csv$/i.test(file.name)) { Papa.parse(file, { header: true, skipEmptyLines: true, complete: results => processParsedRows(results.data || []) }); } else { const reader = new FileReader(); reader.onload = ev => { try { const wb = XLSX.read(ev.target?.result, { type: 'array' }); const ws = wb.Sheets[wb.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(ws, { defval: '' }); processParsedRows(json); } catch (err) { console.error('Error parsing excel:', err); } }; reader.readAsArrayBuffer(file); } }); e.target.value = ''; };
+      
       const processParsedRows = (rows) => {
         const newTrades = []; const cleanNum = (v) => { if (typeof v === 'number') return v; return parseFloat(String(v || '0').replace(/[,\s₹$]/g, '')) || 0; };
         rows.forEach((row, idx) => {
-          const rawExpiryMonth = getCol(row, 'expirymonth', 'expiry month', 'expiry', 'contract month'); const rawLots = getCol(row, 'lots', 'lot', 'no of lots', 'qty lots'); const rawRate = getCol(row, 'rate', 'price', 'trade rate', 'mcx rate'); const rawBroker = String(getCol(row, 'broker', 'broker name', 'member') || '').trim(); const rawMetal = String(getCol(row, 'metal', 'commodity', 'symbol', 'product') || '').trim(); const rawDate = getCol(row, 'date', 'trade date', 'tradedate', 'transaction date'); const rawSide = String(getCol(row, 'side', 'buy/sell', 'buysell', 'type', 'action', 'b/s') || '').trim().toUpperCase(); const rawLotId = String(getCol(row, 'mappedlot', 'lot id', 'lotid', 'physical lot', 'assigned lot') || '').trim().toUpperCase();
+          const rawExpiryMonth = getCol(row, 'expirymonth', 'expiry month', 'expiry', 'contract month'); const rawLots = getCol(row, 'lots', 'lot', 'no of lots', 'qty lots'); const rawRate = getCol(row, 'rate', 'price', 'trade rate', 'mcx rate'); const rawBroker = String(getCol(row, 'broker', 'broker name', 'member') || '').trim(); const rawMetal = String(getCol(row, 'metal', 'commodity', 'symbol', 'product') || '').trim(); const rawDate = getCol(row, 'date', 'trade date', 'tradedate', 'transaction date'); const rawSide = String(getCol(row, 'side', 'buy/sell', 'buysell', 'type', 'action', 'b/s') || '').trim().toUpperCase(); const rawLotId = String(getCol(row, 'mappedlot', 'lot id', 'lotid', 'physical lot', 'assigned lot') || '').trim().toUpperCase(); const rawOrderId = String(getCol(row, 'orderid', 'order id', 'order no') || '').trim();
+          
           const isMcxCustomFormat = (rawExpiryMonth !== '' || rawBroker !== '') && (rawLots !== '' || rawRate !== '');
           if (isMcxCustomFormat) {
             const tradeDate = parsePromptString(rawDate) || new Date().toISOString().slice(0, 10); const tradeYear = Number(tradeDate.slice(0, 4)) || new Date().getFullYear(); const promptDate = parsePromptString(rawExpiryMonth, tradeYear) || tradeDate;
@@ -929,10 +857,12 @@
             let normBroker = rawBroker.toUpperCase(); if (normBroker.includes('MOTILAL') || normBroker.includes('MOFSL') || normBroker.includes('MOSL')) normBroker = 'MOTILAL'; else if (normBroker.includes('IIFL') || normBroker.includes('INDIA INFOLINE')) normBroker = 'IIFL'; else if (!normBroker) normBroker = 'MCX';
             let isBuy = false; if (rawSide.startsWith('B')) isBuy = true; else if (rawSide.startsWith('S')) isBuy = false; else if (lotsVal < 0) isBuy = false; else isBuy = mcxDefaultSide === 'BUY';
             const absLots = Math.abs(lotsVal); const bQty = isBuy ? absLots : 0; const bRate = isBuy ? rateVal : 0; const sQty = !isBuy ? absLots : 0; const sRate = !isBuy ? rateVal : 0;
-            const rawId = getCol(row, 'transaction id', 'trade id', 'order no'); const tId = rawId ? String(rawId).trim() : `${normBroker.slice(0, 3)}-${tradeDate.replace(/-/g, '').slice(2)}-${idx + 1}`;
+            const tId = rawOrderId || `${normBroker.slice(0, 3)}-${tradeDate.replace(/-/g, '').slice(2)}-${idx + 1}`;
+            
             newTrades.push({ id: `h-mcx-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`, tradeId: tId, exch: 'MCX', broker: normBroker, metal: m, date: tradeDate, prompt: promptDate, expiryLabel: String(rawExpiryMonth).trim().toUpperCase(), buyQty: bQty, buyRate: bRate, sellQty: sQty, sellRate: sRate, mappedLot: rawLotId, archived: false });
             return;
           }
+          
           const rawId = getCol(row, 'Transaction Id', 'Trade Id', 'Trade ID', 'Order No'); if (!rawId && !rawMetal) return; const tId = String(rawId || `TRD-${Date.now()}-${idx}`).trim(); const prod = String(getCol(row, 'Product', 'Symbol', 'Instrument', 'Metal') || '').toUpperCase(); const desc = String(getCol(row, 'Product Description', 'Description', 'Contract') || ''); const upperDesc = desc.toUpperCase();
           let m = shortMetal(prod || upperDesc || 'AL');
           let exchange = 'LME'; if (upperDesc.includes('MCX') || prod.includes('MCX') || rawBroker.toUpperCase().includes('MOTILAL') || rawBroker.toUpperCase().includes('IIFL')) exchange = 'MCX';
@@ -942,7 +872,7 @@
         });
         if (newTrades.length > 0) onImportTrades(newTrades);
       };
-      const handleDownloadMcxTemplate = () => { const sampleRows = [{ date: '2026-10-15', expirymonth: 'OCT-26', metal: 'AL', lots: -5, rate: 242.50, broker: 'Motilal', side: 'SELL', mappedlot: 'AL1' }]; const ws = XLSX.utils.json_to_sheet(sampleRows); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'MCX_Trades'); XLSX.writeFile(wb, 'MCX_Hedge_Upload_Template.xlsx'); };
+      const handleDownloadMcxTemplate = () => { const sampleRows = [{ date: '2026-10-15', expirymonth: 'OCT-26', metal: 'AL', lots: -5, rate: 242.50, broker: 'Motilal', side: 'SELL', mappedlot: 'AL1', orderid: 'ORD-1001' }]; const ws = XLSX.utils.json_to_sheet(sampleRows); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'MCX_Trades'); XLSX.writeFile(wb, 'MCX_Hedge_Upload_Template.xlsx'); };
       const handleAddManualTrade = (e) => { e.preventDefault(); const tId = tradeId.trim() || `${exch === 'MCX' ? broker.slice(0, 3) : 'LME'}-${Date.now().toString().slice(-5)}`; const parsedPrompt = parsePromptString(prompt, Number(date.slice(0, 4))) || date; onAddHedgeTrade({ id: `h-man-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, tradeId: tId, exch, broker: exch === 'MCX' ? broker : 'LME', metal, date, prompt: parsedPrompt, buyQty: parseFloat(buyQty) || 0, buyRate: parseFloat(buyRate) || 0, sellQty: parseFloat(sellQty) || 0, sellRate: parseFloat(sellRate) || 0, mappedLot: mappedLot.trim().toUpperCase(), archived: false }); setTradeId(''); setBuyQty(''); setBuyRate(''); setSellQty(''); setSellRate(''); setMappedLot(''); };
       const handleAddSettle = (e) => { e.preventDefault(); const p = parseFloat(liveSettle); if (!livePrompt || isNaN(p)) return; onAddLiveSettle(liveMetal, liveExch, livePrompt, p); setLiveSettle(''); };
       const visibleTrades = hedges.filter(h => {
@@ -964,7 +894,7 @@
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <div className="bg-gradient-to-b from-[#111c33] to-[#16223d] border border-[#1e2d4d] rounded-2xl p-5 shadow-xl space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-2"><h3 className="text-sm font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2"><Upload className="w-4 h-4" /><span>Upload MCX / LME Broker Excel (.XLSX / .CSV)</span></h3><button onClick={handleDownloadMcxTemplate} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[#16223d] hover:bg-[#1e2d4d] text-cyan-300 border border-cyan-500/30 cursor-pointer"><Download className="w-3 h-3" /><span>MCX Template</span></button></div>
-                <div className="p-2.5 rounded-xl bg-[#0b1220] border border-slate-800 text-[11px] text-slate-300 space-y-1.5"><div className="flex items-center justify-between flex-wrap gap-2"><span className="text-slate-400 font-semibold uppercase text-[10px]">Supported MCX Columns:</span><div className="flex items-center gap-1.5"><span className="text-[10px] text-slate-400">Unsigned Lots Default:</span><button type="button" onClick={() => setMcxDefaultSide('SELL')} className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${mcxDefaultSide === 'SELL' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-slate-800 text-slate-400'}`}>SELL HEDGE</button><button type="button" onClick={() => setMcxDefaultSide('BUY')} className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${mcxDefaultSide === 'BUY' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>BUY HEDGE</button></div></div><div className="font-mono text-[11px] text-cyan-300 bg-[#111c33] px-2.5 py-1 rounded border border-[#1e2d4d]">date | expirymonth | metal | lots | rate (Rs/kg) | broker (Motilal / IIFL)</div></div>
+                <div className="p-2.5 rounded-xl bg-[#0b1220] border border-slate-800 text-[11px] text-slate-300 space-y-1.5"><div className="flex items-center justify-between flex-wrap gap-2"><span className="text-slate-400 font-semibold uppercase text-[10px]">Supported MCX Columns:</span><div className="flex items-center gap-1.5"><span className="text-[10px] text-slate-400">Unsigned Lots Default:</span><button type="button" onClick={() => setMcxDefaultSide('SELL')} className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${mcxDefaultSide === 'SELL' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-slate-800 text-slate-400'}`}>SELL HEDGE</button><button type="button" onClick={() => setMcxDefaultSide('BUY')} className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${mcxDefaultSide === 'BUY' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}`}>BUY HEDGE</button></div></div><div className="font-mono text-[11px] text-cyan-300 bg-[#111c33] px-2.5 py-1 rounded border border-[#1e2d4d]">date | expirymonth | metal | lots | rate (Rs/kg) | broker (Motilal / IIFL) | orderid</div></div>
                 <input type="file" accept=".csv,.xlsx,.xls" multiple onChange={handleFileUpload} className="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white cursor-pointer" />
               </div>
               <div className="bg-gradient-to-b from-[#111c33] to-[#16223d] border border-[#1e2d4d] rounded-2xl p-5 shadow-xl space-y-3">
@@ -1043,7 +973,7 @@
     };
 
     // ==================== EDIT MODALS ====================
-          const EditPhysicalModal = ({ editing, onClose, onSave }) => {
+    const EditPhysicalModal = ({ editing, onClose, onSave }) => {
       const [formData, setFormData] = useState(editing.data);
       if (!editing) return null;
       const isBuy = editing.type === 'buy';
