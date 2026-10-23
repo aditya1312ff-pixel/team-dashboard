@@ -448,6 +448,14 @@
 
     const PromptMatrix = ({ items, currentMetal, onSelectLot, onOpenRolloverModal, onSyncOpenPrompts, onUpdateSettlePrice, highlightPrompt }) => {
       const [timelineFilter, setTimelineFilter] = useState('ALL'); const [exchangeFilter, setExchangeFilter] = useState('ALL'); const [search, setSearch] = useState(''); const [onlyOpen, setOnlyOpen] = useState(true); const [onlyMismatches, setOnlyMismatches] = useState(false);
+      const [sortConfig, setSortConfig] = useState({ key: 'daysToExpiry', direction: 'ascending' });
+
+      const handleSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') direction = 'descending';
+        setSortConfig({ key, direction });
+      };
+
       const filtered = items.filter(item => {
         if (currentMetal !== 'BOTH' && canonicalMetal(item.metal) !== currentMetal) return false;
         if (timelineFilter !== 'ALL' && item.timelineBucket !== timelineFilter) return false;
@@ -457,8 +465,29 @@
         if (search) { const q = search.toLowerCase(); const lotsStr = item.lots.map(l => l.lot).join(' ').toLowerCase(); const hay = `${item.prompt} ${item.metal} ${item.exchange} ${lotsStr}`.toLowerCase(); if (!hay.includes(q)) return false; }
         return true;
       });
+
+      const sorted = useMemo(() => {
+        let sortableItems = [...filtered];
+        if (sortConfig !== null) {
+          sortableItems.sort((a, b) => {
+            let aVal = a[sortConfig.key];
+            let bVal = b[sortConfig.key];
+            if (sortConfig.key === 'prompt') { aVal = a.prompt || ''; bVal = b.prompt || ''; }
+            if (sortConfig.key === 'timelineBucket') { aVal = a.daysToExpiry; bVal = b.daysToExpiry; }
+            if (sortConfig.key === 'metal') { aVal = a.metal || ''; bVal = b.metal || ''; }
+            if (sortConfig.key === 'lots') { aVal = a.lots.map(l=>l.lot).join(','); bVal = b.lots.map(l=>l.lot).join(','); }
+
+            if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
+            return 0;
+          });
+        }
+        return sortableItems;
+      }, [filtered, sortConfig]);
+
       const openItems = items.filter(i => Math.abs(i.netQtyMT) > 0.0001); const totalOpenNetMT = openItems.reduce((acc, i) => acc + i.netQtyMT, 0); const totalOpenMTM = openItems.reduce((acc, i) => acc + i.totalOpenMTM, 0);
       const t0Items = openItems.filter(i => i.timelineBucket === 'T+0'); const t3Items = openItems.filter(i => i.timelineBucket === 'T+3'); const d30Items = openItems.filter(i => i.timelineBucket === '30D'); const cashSqueezeItems = openItems.filter(i => i.hasMismatch && i.mismatchType === 'CASH_SQUEEZE');
+
       const bucketBadge = (bucket, days) => {
         if (days < 0) return (<span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">OVERDUE ({Math.abs(days)}d)</span>);
         if (bucket === 'T+0') return (<span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">T+0 TODAY</span>);
@@ -466,6 +495,12 @@
         if (bucket === '30D') return (<span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">30 DAYS ({days}d)</span>);
         return (<span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-700">FORWARD ({days}d)</span>);
       };
+
+      const SortIcon = ({ columnKey }) => {
+        if (sortConfig.key !== columnKey) return <ArrowUpDown className="w-3 h-3 inline ml-1 opacity-30" />;
+        return sortConfig.direction === 'ascending' ? <ChevronUp className="w-3 h-3 inline ml-1 text-blue-400" /> : <ChevronDown className="w-3 h-3 inline ml-1 text-blue-400" />;
+      };
+
       return (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -502,10 +537,24 @@
             <div className="px-5 py-4 border-b border-[#1e2d4d] flex items-center justify-between flex-wrap gap-2"><div><h3 className="text-sm font-bold text-slate-200 tracking-wide flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-400" /><span>Prompt Date Expiry &amp; Rollover Matrix</span><span className="text-xs text-slate-400 font-normal">({filtered.length} prompt entries)</span></h3></div></div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left border-collapse">
-                <thead><tr className="bg-[#16223d] text-slate-400 uppercase text-[10.5px] font-semibold tracking-wider border-b border-[#1e2d4d]"><th className="py-3 px-4">Prompt Date</th><th className="py-3 px-3">Timeline Bucket</th><th className="py-3 px-3">Metal / Exch</th><th className="py-3 px-3 text-right">Buy Qty (MT)</th><th className="py-3 px-3 text-right">Sell Qty (MT)</th><th className="py-3 px-3 text-right">Net Open Qty (MT)</th><th className="py-3 px-3">Direction</th><th className="py-3 px-3">Associated Lots</th><th className="py-3 px-3 text-right">Today's Settle</th><th className="py-3 px-3 text-right">Open MTM (PnL)</th><th className="py-3 px-4 text-center">Action / Rollover</th></tr></thead>
+                <thead>
+                  <tr className="bg-[#16223d] text-slate-400 uppercase text-[10.5px] font-semibold tracking-wider border-b border-[#1e2d4d]">
+                    <th className="py-3 px-4 cursor-pointer hover:text-white" onClick={() => handleSort('prompt')}>Prompt Date <SortIcon columnKey="prompt"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('timelineBucket')}>Timeline Bucket <SortIcon columnKey="timelineBucket"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('metal')}>Metal / Exch <SortIcon columnKey="metal"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('buyQtyMT')}>Buy Qty (MT) <SortIcon columnKey="buyQtyMT"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('sellQtyMT')}>Sell Qty (MT) <SortIcon columnKey="sellQtyMT"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('netQtyMT')}>Net Open Qty (MT) <SortIcon columnKey="netQtyMT"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('netQtyMT')}>Direction <SortIcon columnKey="netQtyMT"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('lots')}>Associated Lots <SortIcon columnKey="lots"/></th>
+                    <th className="py-3 px-3 text-right">Today's Settle</th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('totalOpenMTM')}>Open MTM (PnL) <SortIcon columnKey="totalOpenMTM"/></th>
+                    <th className="py-3 px-4 text-center">Action / Rollover</th>
+                  </tr>
+                </thead>
                 <tbody className="divide-y divide-[#182543] font-mono">
-                  {filtered.length === 0 ? (<tr><td colSpan={11} className="py-12 text-center text-xs text-slate-400 font-sans">No prompt dates matching the current filter criteria.</td></tr>) : (
-                    filtered.map(item => {
+                  {sorted.length === 0 ? (<tr><td colSpan={11} className="py-12 text-center text-xs text-slate-400 font-sans">No prompt dates matching the current filter criteria.</td></tr>) : (
+                    sorted.map(item => {
                       const isOpen = Math.abs(item.netQtyMT) > 0.0001; const isHighlighted = highlightPrompt === item.prompt; const isShort = item.netQtyMT < -0.0001;
                       return (
                         <tr key={item.key} className={`transition-colors ${isHighlighted ? 'bg-blue-500/15' : item.hasMismatch ? 'bg-amber-950/15 hover:bg-amber-950/25' : isOpen ? 'hover:bg-[#16223d]/70' : 'opacity-60 bg-slate-900/30'}`}>
@@ -529,23 +578,61 @@
         </div>
       );
     };
+
     const CombinedDashboard = ({ data, onSelectLot, onOpenPromptMatrix }) => {
       const [search, setSearch] = useState(''); const [instructionFilter, setInstructionFilter] = useState(''); const [expandedLots, setExpandedLots] = useState(new Set());
+      const [sortConfig, setSortConfig] = useState({ key: 'lot', direction: 'ascending' });
+
       const toggleExpand = (lot, e) => { e.stopPropagation(); setExpandedLots(prev => { const next = new Set(prev); if (next.has(lot)) next.delete(lot); else next.add(lot); return next; }); };
+
+      const handleSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') direction = 'descending';
+        setSortConfig({ key, direction });
+      };
+
       const filtered = data.filter(r => {
         if (instructionFilter && r.instruction !== instructionFilter) return false;
         if (search) { const hay = `${r.lot} ${r.metal} ${r.instruction} ${r.buyerSearch} ${r.sellerSearch}`.toLowerCase(); if (!hay.includes(search.toLowerCase())) return false; }
         return true;
       });
+
+      const sorted = useMemo(() => {
+        let sortableItems = [...filtered];
+        if (sortConfig !== null) {
+          sortableItems.sort((a, b) => {
+            let aVal = a[sortConfig.key];
+            let bVal = b[sortConfig.key];
+            
+            if (sortConfig.key === 'physBuyDate') { aVal = a.physBuyDate || ''; bVal = b.physBuyDate || ''; }
+            if (sortConfig.key === 'lmeActivePrompt') { aVal = a.lmeActivePrompt || ''; bVal = b.lmeActivePrompt || ''; }
+            if (sortConfig.key === 'mcxActivePrompt') { aVal = a.mcxActivePrompt || ''; bVal = b.mcxActivePrompt || ''; }
+            if (sortConfig.key === 'instruction') { aVal = a.instruction || ''; bVal = b.instruction || ''; }
+
+            if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
+            return 0;
+          });
+        }
+        return sortableItems;
+      }, [filtered, sortConfig]);
+
       const totalBuyVol = filtered.reduce((s, r) => s + r.physBuyQty, 0); const totalSellVol = filtered.reduce((s, r) => s + r.physSellQty, 0);
       const lmeReal = filtered.reduce((s, r) => s + (r.lmeRealized || 0), 0); const mcxReal = filtered.reduce((s, r) => s + (r.mcxRealized || 0), 0); const lmeMtm = filtered.reduce((s, r) => s + (r.lmeMTM || 0), 0); const mcxMtm = filtered.reduce((s, r) => s + (r.mcxMTM || 0), 0);
       const totalNetRealized = filtered.reduce((s, r) => s + r.totalNetRealizedPnL, 0); const totalHedgeMTM = lmeMtm + mcxMtm; const totalNaked = filtered.reduce((s, r) => s + r.nakedExposure, 0);
+      
       const instructionBadge = (instr) => {
         if (instr.includes('UNDER') || instr.includes('OVER')) return <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">{instr}</span>;
         if (instr.includes('FULLY')) return <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">{instr}</span>;
         if (instr.includes('MOVE')) return <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">{instr}</span>;
         return <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-medium bg-slate-800 text-slate-300 border border-slate-700">{instr}</span>;
       };
+
+      const SortIcon = ({ columnKey }) => {
+        if (sortConfig.key !== columnKey) return <ArrowUpDown className="w-3 h-3 inline ml-1 opacity-30" />;
+        return sortConfig.direction === 'ascending' ? <ChevronUp className="w-3 h-3 inline ml-1 text-blue-400" /> : <ChevronDown className="w-3 h-3 inline ml-1 text-blue-400" />;
+      };
+
       return (
         <div className="space-y-6">
           <div className="bg-gradient-to-b from-[#111c33] to-[#16223d] border border-[#1e2d4d] rounded-2xl p-4 shadow-lg flex flex-wrap gap-6 items-center justify-between">
@@ -576,28 +663,28 @@
               <table className="w-full text-xs text-left border-collapse">
                 <thead>
                   <tr className="bg-[#16223d] text-slate-400 uppercase text-[10.5px] font-semibold tracking-wider border-b border-[#1e2d4d]">
-                    <th className="py-3 px-3">Lot ID</th>
-                    <th className="py-3 px-3">Metal</th>
-                    <th className="py-3 px-3">Buy Date</th>
-                    <th className="py-3 px-3 text-right">Buy Qty (MT)</th>
-                    <th className="py-3 px-3 text-right">Sold Qty (MT)</th>
-                    <th className="py-3 px-3 text-right">In Stock (MT)</th>
-                    <th className="py-3 px-3 text-right">Phys Realized</th>
-                    <th className="py-3 px-3 text-right">LME Realized</th> {/* NEW COLUMN */}
-                    <th className="py-3 px-3 text-right">MCX Realized</th> {/* NEW COLUMN */}
-                    <th className="py-3 px-3">L Active Prompt</th>
-                    <th className="py-3 px-3 text-right">L Net (MT)</th>
-                    <th className="py-3 px-3 text-right">L MTM</th>
-                    <th className="py-3 px-3">M Active Prompt</th>
-                    <th className="py-3 px-3 text-right">M Net</th>
-                    <th className="py-3 px-3 text-right">Naked Qty (MT)</th>
-                    <th className="py-3 px-3 text-right">Total MTM</th>
-                    <th className="py-3 px-3 text-right">Net Realized</th>
-                    <th className="py-3 px-4">Instruction</th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('lot')}>Lot ID <SortIcon columnKey="lot"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('metal')}>Metal <SortIcon columnKey="metal"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('physBuyDate')}>Buy Date <SortIcon columnKey="physBuyDate"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('physBuyQty')}>Buy Qty (MT) <SortIcon columnKey="physBuyQty"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('physSellQty')}>Sold Qty (MT) <SortIcon columnKey="physSellQty"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('physInStockQty')}>In Stock (MT) <SortIcon columnKey="physInStockQty"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('physRealizedPnL')}>Phys Realized <SortIcon columnKey="physRealizedPnL"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('lmeRealized')}>LME Realized <SortIcon columnKey="lmeRealized"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('mcxRealized')}>MCX Realized <SortIcon columnKey="mcxRealized"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('lmeActivePrompt')}>L Active Prompt <SortIcon columnKey="lmeActivePrompt"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('lmeNetQty')}>L Net (MT) <SortIcon columnKey="lmeNetQty"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('lmeMTM')}>L MTM <SortIcon columnKey="lmeMTM"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('mcxActivePrompt')}>M Active Prompt <SortIcon columnKey="mcxActivePrompt"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('mcxNetQty')}>M Net <SortIcon columnKey="mcxNetQty"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('nakedExposure')}>Naked Qty (MT) <SortIcon columnKey="nakedExposure"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('totalHedgeMTM')}>Total MTM <SortIcon columnKey="totalHedgeMTM"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('totalNetRealizedPnL')}>Net Realized <SortIcon columnKey="totalNetRealizedPnL"/></th>
+                    <th className="py-3 px-4 cursor-pointer hover:text-white" onClick={() => handleSort('instruction')}>Instruction <SortIcon columnKey="instruction"/></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#182543] font-mono">
-                  {filtered.map(r => {
+                  {sorted.map(r => {
                     const isExpanded = expandedLots.has(r.lot); const allLegs = [...r.lmePromptLegs, ...r.mcxPromptLegs];
                     return (
                       <React.Fragment key={r.lot}>
@@ -605,11 +692,8 @@
                           <td className="py-3 px-3 font-bold text-white whitespace-nowrap"><div className="flex items-center gap-1.5">{allLegs.length > 1 && (<button onClick={e => toggleExpand(r.lot, e)} className="p-0.5 rounded hover:bg-slate-700 text-slate-400">{isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-blue-400" /> : <ChevronRight className="w-3.5 h-3.5" />}</button>)}<span className="group-hover:text-blue-400">{r.lot}</span></div></td>
                           <td className="py-3 px-3 font-sans"><span className="px-2 py-0.5 rounded text-[11px] bg-blue-500/10 text-blue-300 border border-blue-500/20">{shortMetal(r.metal)}</span></td>
                           <td className="py-3 px-3 text-slate-400 font-sans">{fmtD(r.physBuyDate)}</td><td className="py-3 px-3 text-right text-slate-300">{fmt(r.physBuyQty, 2)}</td><td className="py-3 px-3 text-right text-slate-300">{fmt(r.physSellQty, 2)}</td><td className="py-3 px-3 text-right font-bold text-slate-100">{fmt(r.physInStockQty, 2)}</td><td className={`py-3 px-3 text-right font-bold ${pnlClass(r.physRealizedPnL)}`}>{fmt(r.physRealizedPnL)}</td>
-                          
-                          {/* NEW COLUMNS */}
                           <td className={`py-3 px-3 text-right font-bold ${pnlClass(r.lmeRealized)}`}>{fmt(r.lmeRealized)}</td>
                           <td className={`py-3 px-3 text-right font-bold ${pnlClass(r.mcxRealized)}`}>{fmt(r.mcxRealized)}</td>
-                          
                           <td className="py-3 px-3 text-slate-200">{r.lmeActivePrompt ? fmtD(r.lmeActivePrompt) : '—'}</td><td className={`py-3 px-3 text-right font-bold ${pnlClass(r.lmeNetQty)}`}>{fmt(r.lmeNetQty, 2)}</td><td className={`py-3 px-3 text-right font-bold ${pnlClass(r.lmeMTM)}`}>{fmt(r.lmeMTM)}</td>
                           <td className="py-3 px-3 text-slate-300">{r.mcxActivePrompt ? fmtD(r.mcxActivePrompt) : '—'}</td><td className={`py-3 px-3 text-right font-bold ${pnlClass(r.mcxNetQty)}`}>{fmt(r.mcxNetQty, 2)}</td>
                           <td className={`py-3 px-3 text-right font-bold ${pnlClass(r.nakedExposure)}`}>{fmt(r.nakedExposure, 2)}</td><td className={`py-3 px-3 text-right font-bold ${pnlClass(r.totalHedgeMTM)}`}>{fmt(r.totalHedgeMTM)}</td><td className={`py-3 px-3 text-right font-bold ${pnlClass(r.totalNetRealizedPnL)}`}>{fmt(r.totalNetRealizedPnL)}</td><td className="py-3 px-4 font-sans whitespace-nowrap">{instructionBadge(r.instruction)}</td>
@@ -624,10 +708,45 @@
         </div>
       );
     };
+
     const PhysicalAnalytics = ({ data, onSelectLot }) => {
       const [search, setSearch] = useState('');
+      const [sortConfig, setSortConfig] = useState({ key: 'lot', direction: 'ascending' });
+
+      const handleSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') direction = 'descending';
+        setSortConfig({ key, direction });
+      };
+
       const filtered = data.filter(r => { if (!search) return true; const hay = `${r.lot} ${r.metal} ${r.physStatus} ${r.buyerSearch} ${r.sellerSearch}`.toLowerCase(); return hay.includes(search.toLowerCase()); });
+      
+      const sorted = useMemo(() => {
+        let sortableItems = [...filtered];
+        if (sortConfig !== null) {
+          sortableItems.sort((a, b) => {
+            let aVal = a[sortConfig.key];
+            let bVal = b[sortConfig.key];
+            if (sortConfig.key === 'physBuyDate') { aVal = a.physBuyDate || ''; bVal = b.physBuyDate || ''; }
+            if (sortConfig.key === 'physStatus') { aVal = a.physStatus || ''; bVal = b.physStatus || ''; }
+            if (sortConfig.key === 'buyerNames') { aVal = a.buyerNames?.join(', ') || ''; bVal = b.buyerNames?.join(', ') || ''; }
+            if (sortConfig.key === 'sellerNames') { aVal = a.sellerNames?.join(', ') || ''; bVal = b.sellerNames?.join(', ') || ''; }
+
+            if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
+            return 0;
+          });
+        }
+        return sortableItems;
+      }, [filtered, sortConfig]);
+
       const totalBought = filtered.reduce((s, r) => s + r.physBuyQty, 0); const totalSold = filtered.reduce((s, r) => s + r.physSellQty, 0); const totalInStock = filtered.reduce((s, r) => s + r.physInStockQty, 0); const totalRealized = filtered.reduce((s, r) => s + r.physRealizedPnL, 0);
+      
+      const SortIcon = ({ columnKey }) => {
+        if (sortConfig.key !== columnKey) return <ArrowUpDown className="w-3 h-3 inline ml-1 opacity-30" />;
+        return sortConfig.direction === 'ascending' ? <ChevronUp className="w-3 h-3 inline ml-1 text-blue-400" /> : <ChevronDown className="w-3 h-3 inline ml-1 text-blue-400" />;
+      };
+
       return (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -641,22 +760,22 @@
               <table className="w-full text-xs text-left border-collapse">
                 <thead>
                   <tr className="bg-[#16223d] text-slate-400 uppercase text-[10.5px] font-semibold border-b border-[#1e2d4d]">
-                    <th className="py-3 px-4">Lot ID</th>
-                    <th className="py-3 px-3">Metal</th>
-                    <th className="py-3 px-3">Supplier</th>
-                    <th className="py-3 px-3">Buyer / Seller</th>
-                    <th className="py-3 px-3">Buy Date</th>
-                    <th className="py-3 px-3 text-right">Buy Qty (MT)</th>
-                    <th className="py-3 px-3 text-right">Buy Landed Price</th>
-                    <th className="py-3 px-3 text-right">Sold Qty (MT)</th>
-                    <th className="py-3 px-3 text-right">Avg Sell Price</th>
-                    <th className="py-3 px-3 text-right">In Stock (MT)</th>
-                    <th className="py-3 px-3 text-right">Realized PnL</th>
-                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 cursor-pointer hover:text-white" onClick={() => handleSort('lot')}>Lot ID <SortIcon columnKey="lot"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('metal')}>Metal <SortIcon columnKey="metal"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('buyerNames')}>Supplier <SortIcon columnKey="buyerNames"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('sellerNames')}>Buyer / Seller <SortIcon columnKey="sellerNames"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('physBuyDate')}>Buy Date <SortIcon columnKey="physBuyDate"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('physBuyQty')}>Buy Qty (MT) <SortIcon columnKey="physBuyQty"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('physBuyPrice')}>Buy Landed Price <SortIcon columnKey="physBuyPrice"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('physSellQty')}>Sold Qty (MT) <SortIcon columnKey="physSellQty"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('physSellPrice')}>Avg Sell Price <SortIcon columnKey="physSellPrice"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('physInStockQty')}>In Stock (MT) <SortIcon columnKey="physInStockQty"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('physRealizedPnL')}>Realized PnL <SortIcon columnKey="physRealizedPnL"/></th>
+                    <th className="py-3 px-4 cursor-pointer hover:text-white" onClick={() => handleSort('physStatus')}>Status <SortIcon columnKey="physStatus"/></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#182543] font-mono">
-                  {filtered.map(r => (
+                  {sorted.map(r => (
                     <tr key={r.lot} onClick={() => onSelectLot(r.lot)} className="hover:bg-[#16223d]/70 cursor-pointer">
                       <td className="py-3 px-4 font-bold text-white">{r.lot}</td>
                       <td className="py-3 px-3 font-sans">{shortMetal(r.metal)}</td>
@@ -686,11 +805,54 @@
 
     const HedgeAnalytics = ({ data, onSelectLot, onUpdateLotFx }) => {
       const [search, setSearch] = useState(''); const [statusFilter, setStatusFilter] = useState(''); const [expandedLots, setExpandedLots] = useState(new Set());
+      const [sortConfig, setSortConfig] = useState({ key: 'lot', direction: 'ascending' });
+
       const toggleExpand = (lot, e) => { e.stopPropagation(); setExpandedLots(prev => { const next = new Set(prev); if (next.has(lot)) next.delete(lot); else next.add(lot); return next; }); };
+
+      const handleSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') direction = 'descending';
+        setSortConfig({ key, direction });
+      };
+
       const filtered = data.filter(r => { if (statusFilter && r.remark !== statusFilter) return false; if (search) { const hay = `${r.lot} ${r.metal} ${r.lme.activePrompt || ''} ${r.mcx.activePrompt || ''}`.toLowerCase(); if (!hay.includes(search.toLowerCase())) return false; } return true; });
+      
+      const sorted = useMemo(() => {
+        let sortableItems = [...filtered];
+        if (sortConfig !== null) {
+          sortableItems.sort((a, b) => {
+            let aVal = a[sortConfig.key];
+            let bVal = b[sortConfig.key];
+            
+            if (sortConfig.key === 'lmeActivePrompt') { aVal = a.lme.activePrompt || ''; bVal = b.lme.activePrompt || ''; }
+            if (sortConfig.key === 'lmeNetQty') { aVal = a.lme.netQty || 0; bVal = b.lme.netQty || 0; }
+            if (sortConfig.key === 'lmeSettle') { aVal = a.lme.settle || 0; bVal = b.lme.settle || 0; }
+            if (sortConfig.key === 'lmeMTM') { aVal = a.lme.mtm || 0; bVal = b.lme.mtm || 0; }
+            if (sortConfig.key === 'lmeRealized') { aVal = a.lme.realized || 0; bVal = b.lme.realized || 0; }
+            if (sortConfig.key === 'mcxActivePrompt') { aVal = a.mcx.activePrompt || ''; bVal = b.mcx.activePrompt || ''; }
+            if (sortConfig.key === 'mcxNetQty') { aVal = a.mcx.netQty || 0; bVal = b.mcx.netQty || 0; }
+            if (sortConfig.key === 'mcxMTM') { aVal = a.mcx.mtm || 0; bVal = b.mcx.mtm || 0; }
+            if (sortConfig.key === 'mcxRealized') { aVal = a.mcx.realized || 0; bVal = b.mcx.realized || 0; }
+            if (sortConfig.key === 'totalRealized') { aVal = a.totalRealized || 0; bVal = b.totalRealized || 0; }
+            if (sortConfig.key === 'remark') { aVal = a.remark || ''; bVal = b.remark || ''; }
+
+            if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
+            return 0;
+          });
+        }
+        return sortableItems;
+      }, [filtered, sortConfig]);
+
       const totalLmeBuy = filtered.reduce((s, r) => s + (r.lme?.buyQty || 0), 0); const totalLmeSell = filtered.reduce((s, r) => s + (r.lme?.sellQty || 0), 0); const totalMcxBuy = filtered.reduce((s, r) => s + (r.mcx?.buyQty || 0), 0); const totalMcxSell = filtered.reduce((s, r) => s + (r.mcx?.sellQty || 0), 0);
       const lmeReal = filtered.reduce((s, r) => s + (r.lme?.realized || 0), 0); const mcxReal = filtered.reduce((s, r) => s + (r.mcx?.realized || 0), 0); const lmeMtm = filtered.reduce((s, r) => s + (r.lme?.mtm || 0), 0); const mcxMtm = filtered.reduce((s, r) => s + (r.mcx?.mtm || 0), 0);
       const activeCount = filtered.filter(r => r.remark === 'Hedge Active').length; const squaredCount = filtered.filter(r => r.remark === 'Hedge Squared Off').length; const rolloverCount = filtered.filter(r => r.hasRollover).length;
+
+      const SortIcon = ({ columnKey }) => {
+        if (sortConfig.key !== columnKey) return <ArrowUpDown className="w-3 h-3 inline ml-1 opacity-30" />;
+        return sortConfig.direction === 'ascending' ? <ChevronUp className="w-3 h-3 inline ml-1 text-blue-400" /> : <ChevronDown className="w-3 h-3 inline ml-1 text-blue-400" />;
+      };
+
       return (
         <div className="space-y-6">
           <div className="bg-gradient-to-b from-[#111c33] to-[#16223d] border border-[#1e2d4d] rounded-2xl p-4 shadow-lg flex flex-wrap gap-6 items-center justify-between">
@@ -717,9 +879,26 @@
           <div className="bg-[#111c33] border border-[#1e2d4d] rounded-2xl shadow-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left border-collapse">
-                <thead><tr className="bg-[#16223d] text-slate-400 uppercase text-[10.5px] font-semibold tracking-wider border-b border-[#1e2d4d]"><th className="py-3 px-3">Lot ID</th><th className="py-3 px-3">Metal</th><th className="py-3 px-3 text-right">Lot FX (USDINR)</th><th className="py-3 px-3">L Active Prompt</th><th className="py-3 px-3 text-right">L Open Net (MT)</th><th className="py-3 px-3 text-right">L Settle</th><th className="py-3 px-3 text-right">L MTM</th><th className="py-3 px-3 text-right">L Realized</th><th className="py-3 px-3">M Active Prompt</th><th className="py-3 px-3 text-right">M Open Net</th><th className="py-3 px-3 text-right">M MTM</th><th className="py-3 px-3 text-right">M Realized</th><th className="py-3 px-3 text-right">Total Realized</th><th className="py-3 px-4">Status &amp; Rollover</th></tr></thead>
+                <thead>
+                  <tr className="bg-[#16223d] text-slate-400 uppercase text-[10.5px] font-semibold tracking-wider border-b border-[#1e2d4d]">
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('lot')}>Lot ID <SortIcon columnKey="lot"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('metal')}>Metal <SortIcon columnKey="metal"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('fxRate')}>Lot FX (USDINR) <SortIcon columnKey="fxRate"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('lmeActivePrompt')}>L Active Prompt <SortIcon columnKey="lmeActivePrompt"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('lmeNetQty')}>L Open Net (MT) <SortIcon columnKey="lmeNetQty"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('lmeSettle')}>L Settle <SortIcon columnKey="lmeSettle"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('lmeMTM')}>L MTM <SortIcon columnKey="lmeMTM"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('lmeRealized')}>L Realized <SortIcon columnKey="lmeRealized"/></th>
+                    <th className="py-3 px-3 cursor-pointer hover:text-white" onClick={() => handleSort('mcxActivePrompt')}>M Active Prompt <SortIcon columnKey="mcxActivePrompt"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('mcxNetQty')}>M Open Net <SortIcon columnKey="mcxNetQty"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('mcxMTM')}>M MTM <SortIcon columnKey="mcxMTM"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('mcxRealized')}>M Realized <SortIcon columnKey="mcxRealized"/></th>
+                    <th className="py-3 px-3 text-right cursor-pointer hover:text-white" onClick={() => handleSort('totalRealized')}>Total Realized <SortIcon columnKey="totalRealized"/></th>
+                    <th className="py-3 px-4 cursor-pointer hover:text-white" onClick={() => handleSort('remark')}>Status &amp; Rollover <SortIcon columnKey="remark"/></th>
+                  </tr>
+                </thead>
                 <tbody className="divide-y divide-[#182543] font-mono">
-                  {filtered.map(r => {
+                  {sorted.map(r => {
                     const isExpanded = expandedLots.has(r.lot); const allLegs = [...r.lme.promptLegs, ...r.mcx.promptLegs];
                     return (
                       <React.Fragment key={r.lot}>
@@ -748,7 +927,7 @@
       const [sellLot, setSellLot] = useState(''); const [sellCat, setSellCat] = useState(''); const [sellDate, setSellDate] = useState(new Date().toISOString().slice(0, 10)); const [sellQty, setSellQty] = useState(''); const [sellPrice, setSellPrice] = useState('');
       const duty = getDuty(buyMetal);
       
-         const calculateLanded = () => { 
+      const calculateLanded = () => { 
         if (buyExch === 'MCX') {
           const basePriceKg = parseFloat(buyCsp) || 0;
           const premKg = parseFloat(buyPrem) || 0;
