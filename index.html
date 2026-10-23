@@ -183,6 +183,11 @@
       return n > 0 ? 'text-emerald-400' : 'text-rose-400';
     };
 
+    // NATURAL SORT FOR LOT IDS (e.g. ZN2 before ZN10)
+    const naturalSort = (a, b) => {
+      return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+    };
+
     function buildEngine(buys, sells, hedges, liveSettle, defaultFx = 84.2, lotFxMap = {}, asOfDate = new Date()) {
       const buysByLot = {};
       buys.forEach(b => {
@@ -477,6 +482,11 @@
             if (sortConfig.key === 'metal') { aVal = a.metal || ''; bVal = b.metal || ''; }
             if (sortConfig.key === 'lots') { aVal = a.lots.map(l=>l.lot).join(','); bVal = b.lots.map(l=>l.lot).join(','); }
 
+            // Use natural sort for text fields that might contain numbers
+            if (typeof aVal === 'string' && typeof bVal === 'string') {
+              return sortConfig.direction === 'ascending' ? naturalSort(aVal, bVal) : naturalSort(bVal, aVal);
+            }
+
             if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
             if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
             return 0;
@@ -609,6 +619,11 @@
             if (sortConfig.key === 'mcxActivePrompt') { aVal = a.mcxActivePrompt || ''; bVal = b.mcxActivePrompt || ''; }
             if (sortConfig.key === 'instruction') { aVal = a.instruction || ''; bVal = b.instruction || ''; }
 
+            // Use natural sort for text fields that might contain numbers
+            if (typeof aVal === 'string' && typeof bVal === 'string') {
+              return sortConfig.direction === 'ascending' ? naturalSort(aVal, bVal) : naturalSort(bVal, aVal);
+            }
+
             if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
             if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
             return 0;
@@ -732,6 +747,11 @@
             if (sortConfig.key === 'buyerNames') { aVal = a.buyerNames?.join(', ') || ''; bVal = b.buyerNames?.join(', ') || ''; }
             if (sortConfig.key === 'sellerNames') { aVal = a.sellerNames?.join(', ') || ''; bVal = b.sellerNames?.join(', ') || ''; }
 
+            // Use natural sort for text fields that might contain numbers
+            if (typeof aVal === 'string' && typeof bVal === 'string') {
+              return sortConfig.direction === 'ascending' ? naturalSort(aVal, bVal) : naturalSort(bVal, aVal);
+            }
+
             if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
             if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
             return 0;
@@ -835,6 +855,11 @@
             if (sortConfig.key === 'mcxRealized') { aVal = a.mcx.realized || 0; bVal = b.mcx.realized || 0; }
             if (sortConfig.key === 'totalRealized') { aVal = a.totalRealized || 0; bVal = b.totalRealized || 0; }
             if (sortConfig.key === 'remark') { aVal = a.remark || ''; bVal = b.remark || ''; }
+
+            // Use natural sort for text fields that might contain numbers
+            if (typeof aVal === 'string' && typeof bVal === 'string') {
+              return sortConfig.direction === 'ascending' ? naturalSort(aVal, bVal) : naturalSort(bVal, aVal);
+            }
 
             if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
             if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
